@@ -1,5 +1,32 @@
 import { expect, test } from "@playwright/test";
 
+test("desktop workspace uses the available screen without horizontal overflow", async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1280, height: 800 },
+    { width: 1024, height: 768 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Your day changes. Your bag should keep up." })).toBeVisible();
+
+    const layout = await page.evaluate(() => {
+      const main = document.querySelector<HTMLElement>(".studio-main")!;
+      const rect = main.getBoundingClientRect();
+      return {
+        mainLeft: Math.round(rect.left),
+        mainRight: Math.round(rect.right),
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+
+    expect(layout.mainLeft).toBe(viewport.width <= 860 ? 0 : 106);
+    expect(layout.mainRight).toBe(viewport.width);
+    expect(layout.documentWidth).toBe(viewport.width);
+  }
+});
+
 test("judge flow: revise, guard, approve, and export", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Your day changes. Your bag should keep up." })).toBeVisible();
