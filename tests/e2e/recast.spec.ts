@@ -1,4 +1,20 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function openStudio(page: Page) {
+  await page.addInitScript(() => window.sessionStorage.setItem("recast-intro-seen", "true"));
+  await page.goto("/");
+  await expect(page.getByTestId("site-intro")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Your day changes. Your bag should keep up." })).toBeVisible();
+}
+
+test("cinematic intro welcomes the user and yields to the studio", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("site-intro")).toBeVisible();
+  await expect(page.getByText("Scattered signals.")).toBeVisible();
+  await page.getByTestId("skip-intro").click();
+  await expect(page.getByTestId("site-intro")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Your day changes. Your bag should keep up." })).toBeVisible();
+});
 
 test("desktop workspace uses the available screen without horizontal overflow", async ({ page }) => {
   for (const viewport of [
@@ -7,8 +23,7 @@ test("desktop workspace uses the available screen without horizontal overflow", 
     { width: 1024, height: 768 },
   ]) {
     await page.setViewportSize(viewport);
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Your day changes. Your bag should keep up." })).toBeVisible();
+    await openStudio(page);
 
     const layout = await page.evaluate(() => {
       const main = document.querySelector<HTMLElement>(".studio-main")!;
@@ -28,8 +43,7 @@ test("desktop workspace uses the available screen without horizontal overflow", 
 });
 
 test("judge flow: revise, guard, approve, and export", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Your day changes. Your bag should keep up." })).toBeVisible();
+  await openStudio(page);
 
   await page.getByTestId("nav-revision").click();
   await page.getByTestId("price-input").fill("₹2,299");
@@ -56,7 +70,7 @@ test("judge flow: revise, guard, approve, and export", async ({ page }) => {
 
 test("campaign memory and intelligence library stay responsive", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
+  await openStudio(page);
   await expect(page.getByRole("heading", { name: "Fifty years of attention." })).toBeVisible();
   await page.getByTestId("nav-intelligence").click();
   await expect(page.getByRole("heading", { name: "The model remembers why people cared." })).toBeVisible();
@@ -75,7 +89,7 @@ test("campaign memory and intelligence library stay responsive", async ({ page }
 
 test("brand team can create a campaign and move work through the studio", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto("/");
+  await openStudio(page);
   await page.getByTestId("nav-builder").click();
   await expect(page.getByRole("heading", { name: "From brand truth to a team-ready system." })).toBeVisible();
 

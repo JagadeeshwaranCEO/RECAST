@@ -904,14 +904,85 @@ function CurrentView() {
   return <CampaignHome />;
 }
 
+function CinematicIntro({ onComplete }: { onComplete: () => void }) {
+  const [leaving, setLeaving] = useState(false);
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const leaveAfter = reduceMotion ? 180 : 4000;
+    const finishAfter = reduceMotion ? 260 : 4700;
+    const beginExit = window.setTimeout(() => setLeaving(true), leaveAfter);
+    const finish = window.setTimeout(onComplete, finishAfter);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" || event.key === "Enter") {
+        setLeaving(true);
+        window.setTimeout(onComplete, 420);
+      }
+    };
+
+    document.body.classList.add("intro-active");
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.clearTimeout(beginExit);
+      window.clearTimeout(finish);
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.classList.remove("intro-active");
+    };
+  }, [onComplete]);
+
+  const skip = () => {
+    setLeaving(true);
+    window.setTimeout(onComplete, 420);
+  };
+
+  return (
+    <section
+      className={cx("cinematic-intro", leaving && "cinematic-intro-leaving")}
+      data-testid="site-intro"
+      aria-label="Welcome to RECAST"
+    >
+      <div className="intro-aurora" aria-hidden="true"><i /><i /><i /></div>
+      <div className="intro-grid" aria-hidden="true" />
+      <div className="intro-orbit intro-orbit-one" aria-hidden="true"><i /><b /></div>
+      <div className="intro-orbit intro-orbit-two" aria-hidden="true"><i /><b /></div>
+
+      <div className="intro-signals" aria-hidden="true">
+        <span className="signal signal-one">BRAND TRUTH</span>
+        <span className="signal signal-two">CULTURAL MEMORY</span>
+        <span className="signal signal-three">HUMAN TENSION</span>
+        <span className="signal signal-four">CHANNEL LOGIC</span>
+      </div>
+
+      <div className="intro-core">
+        <div className="intro-monogram" aria-hidden="true"><span>R</span><i /></div>
+        <p className="intro-overline">MEANING-AWARE CAMPAIGN INTELLIGENCE</p>
+        <h1><span>Scattered signals.</span><em>One living idea.</em></h1>
+        <div className="intro-lockup"><span>RE</span><i>CAST</i></div>
+      </div>
+
+      <div className="intro-status" aria-hidden="true">
+        <span>01</span><i /><p>Memory becomes method</p><strong>STUDIO ONLINE</strong>
+      </div>
+      <button className="intro-skip" onClick={skip} data-testid="skip-intro">Enter studio <ArrowRight size={15} /></button>
+    </section>
+  );
+}
+
 export function CampaignStudio() {
-  const [loading, setLoading] = useState(true);
+  const [showIntro, setShowIntro] = useState(true);
   const [navOpen, setNavOpen] = useState(false);
   const { notice, clearNotice, view } = useCampaignStore();
 
+  const completeIntro = () => {
+    window.sessionStorage.setItem("recast-intro-seen", "true");
+    setShowIntro(false);
+  };
+
   useEffect(() => {
-    const timer = window.setTimeout(() => setLoading(false), 260);
-    return () => window.clearTimeout(timer);
+    if (new URLSearchParams(window.location.search).has("replay")) return;
+    if (window.sessionStorage.getItem("recast-intro-seen") !== "true") return;
+    const frame = window.requestAnimationFrame(() => setShowIntro(false));
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -924,19 +995,18 @@ export function CampaignStudio() {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [view]);
 
-  if (loading) {
-    return <main className="loading-screen"><div className="loading-mark">R<i /></div><p>Connecting campaign source</p><span><i /></span></main>;
-  }
-
   return (
-    <div className="studio-shell">
-      <AppSidebar open={navOpen} onClose={() => setNavOpen(false)} />
-      {navOpen && <button className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Close navigation overlay" />}
-      <div className="studio-main">
-        <AppHeader onMenu={() => setNavOpen(true)} />
-        <main className="content-frame"><CurrentView /></main>
+    <>
+      {showIntro && <CinematicIntro onComplete={completeIntro} />}
+      <div className={cx("studio-shell", showIntro && "studio-awaiting")}>
+        <AppSidebar open={navOpen} onClose={() => setNavOpen(false)} />
+        {navOpen && <button className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Close navigation overlay" />}
+        <div className="studio-main">
+          <AppHeader onMenu={() => setNavOpen(true)} />
+          <main className="content-frame"><CurrentView /></main>
+        </div>
+        {notice && <div className="toast" role="status"><CheckCircle2 size={18} /><span>{notice}</span><button onClick={clearNotice} aria-label="Dismiss"><X size={15} /></button></div>}
       </div>
-      {notice && <div className="toast" role="status"><CheckCircle2 size={18} /><span>{notice}</span><button onClick={clearNotice} aria-label="Dismiss"><X size={15} /></button></div>}
-    </div>
+    </>
   );
 }
