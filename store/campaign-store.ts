@@ -5,7 +5,7 @@ import { createSeedCampaign } from "@/lib/seed";
 import { reviseFact } from "@/lib/revision-engine";
 import type { Campaign } from "@/lib/models";
 
-export type StudioView = "home" | "source" | "concepts" | "canvas" | "revision" | "review";
+export type StudioView = "home" | "builder" | "intelligence" | "team" | "source" | "concepts" | "canvas" | "revision" | "review";
 
 type CampaignState = {
   campaign: Campaign;
@@ -97,4 +97,3 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   clearNotice: () => set({ notice: null }),
   resetDemo: () => set({ campaign: createSeedCampaign(), view: "home", notice: "Demo campaign restored to its approved source." }),
 }));
-

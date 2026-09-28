@@ -10,18 +10,18 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: "RECAST — Meaning-Aware Campaign Studio",
-    description: "Change the campaign’s meaning. Not twenty individual files.",
+    description: "Build, research, revise and approve connected brand campaigns with a meaning-aware AI studio.",
     icons: { icon: "/favicon.png" },
     openGraph: {
       title: "RECAST — Meaning-Aware Campaign Studio",
-      description: "One campaign source. Selective revision. Protected creative.",
+      description: "Five decades of campaign intelligence, one connected creative source and a complete team studio.",
       type: "website",
       images: [{ url: socialImage, width: 1672, height: 941, alt: "RECAST meaning-aware campaign studio" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "RECAST — Meaning-Aware Campaign Studio",
-      description: "Change the campaign’s meaning. Not twenty individual files.",
+      description: "Research-backed campaign creation, selective revision and team approvals in one studio.",
       images: [socialImage],
     },
   };

@@ -53,3 +53,49 @@ test("judge flow: revise, guard, approve, and export", async ({ page }) => {
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("recast-revision-report.md");
 });
+
+test("campaign memory and intelligence library stay responsive", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Fifty years of attention." })).toBeVisible();
+  await page.getByTestId("nav-intelligence").click();
+  await expect(page.getByRole("heading", { name: "The model remembers why people cared." })).toBeVisible();
+  await expect(page.getByText("Pattern Library · R1", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Mean Joe Greene case study" })).toBeVisible();
+  await page.getByRole("button", { name: "Personalization", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Open Wrapped case study" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Mean Joe Greene case study" })).toHaveCount(0);
+
+  const layout = await page.evaluate(() => ({
+    viewportWidth: window.innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.documentWidth).toBe(layout.viewportWidth);
+});
+
+test("brand team can create a campaign and move work through the studio", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await page.getByTestId("nav-builder").click();
+  await expect(page.getByRole("heading", { name: "From brand truth to a team-ready system." })).toBeVisible();
+
+  await page.getByTestId("builder-step-2").click();
+  await page.getByTestId("campaign-challenge").fill("Launch a sustainable product with visible material proof");
+  await page.getByTestId("builder-step-3").click();
+  await page.getByTestId("generate-directions").click();
+  await expect(page.getByRole("heading", { name: "Let the proof look risky" })).toBeVisible();
+
+  await page.getByTestId("builder-step-4").click();
+  await expect(page.getByTestId("launch-blueprint")).toContainText("Let the proof look risky");
+  await page.getByRole("button", { name: "Open team studio" }).click();
+  await expect(page.getByRole("heading", { name: "One room for the work and the decisions." })).toBeVisible();
+
+  await page.getByTestId("task-status-task-2").selectOption("Approved");
+  await expect(page.getByTestId("task-status-task-2")).toHaveValue("Approved");
+  await page.getByPlaceholder("Add a decision, question or feedback…").fill("Approved for the next production pass.");
+  await page.getByRole("button", { name: "Post", exact: true }).click();
+  await expect(page.getByText("Approved for the next production pass.")).toBeVisible();
+
+  const layout = await page.evaluate(() => ({ viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth }));
+  expect(layout.documentWidth).toBe(layout.viewportWidth);
+});

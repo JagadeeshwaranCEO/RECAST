@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
+  BookOpen,
+  CalendarDays,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -11,6 +13,7 @@ import {
   CircleDot,
   Command,
   Download,
+  ExternalLink,
   FileCheck2,
   GitBranch,
   Home,
@@ -19,28 +22,43 @@ import {
   Link2,
   LockKeyhole,
   Menu,
+  MessageSquare,
   PanelTop,
+  Palette,
   PenLine,
+  Plus,
   RotateCcw,
+  Search,
   ShieldCheck,
   Sparkles,
+  Target,
+  UserPlus,
+  Users,
   X,
 } from "lucide-react";
+import { campaignCases, campaignDisciplines, synthesizePatternIdeas } from "@/lib/campaign-intelligence";
 import { checkClaim, exportCampaign, UnsupportedClaimError, validateCampaign } from "@/lib/revision-engine";
 import type { Asset, Campaign, ValidationResult } from "@/lib/models";
 import { type StudioView, useCampaignStore } from "@/store/campaign-store";
+import { type TeamRole, type WorkStatus, useWorkspaceStore } from "@/store/workspace-store";
 
 const navItems: { id: StudioView; label: string; icon: typeof Home; short: string }[] = [
   { id: "home", label: "Campaign home", icon: Home, short: "Home" },
+  { id: "builder", label: "Create a campaign", icon: Plus, short: "Create" },
+  { id: "intelligence", label: "Campaign intelligence", icon: BookOpen, short: "Memory" },
   { id: "source", label: "Source of truth", icon: FileCheck2, short: "Source" },
   { id: "concepts", label: "Creative concepts", icon: Sparkles, short: "Concept" },
   { id: "canvas", label: "Campaign canvas", icon: LayoutTemplate, short: "Canvas" },
+  { id: "team", label: "Team studio", icon: Users, short: "Team" },
   { id: "revision", label: "Revision studio", icon: GitBranch, short: "Revise" },
   { id: "review", label: "Review & publish", icon: ShieldCheck, short: "Review" },
 ];
 
 const viewTitles: Record<StudioView, { eyebrow: string; title: string; note: string }> = {
   home: { eyebrow: "Campaign 01 · Active", title: "Stride Modular Backpack Launch", note: "One campaign source · Three connected outputs" },
+  builder: { eyebrow: "New campaign · Guided build", title: "Campaign builder", note: "Brand, brief, strategy and delivery" },
+  intelligence: { eyebrow: "Pattern library · R1", title: "Campaign intelligence", note: "Five decades of creative mechanics" },
+  team: { eyebrow: "Studio room · 4 collaborators", title: "Team workspace", note: "Roles, feedback and approval flow" },
   source: { eyebrow: "01 · Campaign source", title: "Brief & source of truth", note: "Approved facts control factual copy" },
   concepts: { eyebrow: "02 · Creative direction", title: "Choose one campaign idea", note: "Strategy before production" },
   canvas: { eyebrow: "03 · Connected output", title: "Campaign canvas", note: "Every claim has a source" },
@@ -145,6 +163,71 @@ function AppHeader({ onMenu }: { onMenu: () => void }) {
   );
 }
 
+function CampaignMemoryScroll({ onOpen }: { onOpen: () => void }) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [phase, setPhase] = useState(0);
+  const memories = campaignCases.filter((item) => item.deepDive).slice(0, 6);
+  const statements = [
+    ["Fifty years of attention.", "Not a swipe file—a map of why people cared."],
+    ["Hooks are only the surface.", "Underneath: tension, identity, proof, ritual and a reason to pass it on."],
+    ["Memory becomes method.", "RECAST retrieves the pattern, then rebuilds it around your truth."],
+  ];
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let frame = 0;
+
+    const measure = () => {
+      frame = 0;
+      const rect = section.getBoundingClientRect();
+      const stickyOffset = window.innerWidth <= 860 ? 74 : 86;
+      const travel = Math.max(1, rect.height - window.innerHeight + stickyOffset);
+      const progress = reduceMotion ? 1 : Math.min(1, Math.max(0, (stickyOffset - rect.top) / travel));
+      section.style.setProperty("--memory-progress", progress.toFixed(3));
+      const nextPhase = progress < 0.34 ? 0 : progress < 0.68 ? 1 : 2;
+      setPhase((current) => current === nextPhase ? current : nextPhase);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(measure);
+    };
+
+    measure();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  return (
+    <section className="memory-scroll" ref={sectionRef} aria-label="Five decades of campaign intelligence">
+      <div className="memory-sticky">
+        <div className="memory-kicker"><span>RECAST / CAMPAIGN MEMORY</span><span>1979—2025</span></div>
+        <div className="memory-collage" aria-hidden="true">
+          {memories.map((campaign, index) => (
+            <article className={`memory-card memory-card-${index + 1}`} key={campaign.id} style={{ "--memory-accent": campaign.accent } as React.CSSProperties}>
+              <span>{campaign.year}</span>
+              <strong>{campaign.name}</strong>
+              <small>{campaign.mechanic}</small>
+            </article>
+          ))}
+        </div>
+        <div className="memory-message" key={phase}>
+          <span>0{phase + 1} / 03</span>
+          <h2>{statements[phase][0]}</h2>
+          <p>{statements[phase][1]}</p>
+        </div>
+        <div className="memory-progress" aria-hidden="true"><i /></div>
+        <button className="memory-cta" onClick={onOpen}>Explore the intelligence library <ArrowRight size={16} /></button>
+      </div>
+    </section>
+  );
+}
+
 function CampaignHome() {
   const { campaign, setView } = useCampaignStore();
   const reviewCount = campaign.approvals.filter((item) => item.status !== "approved").length;
@@ -158,7 +241,10 @@ function CampaignHome() {
           <p>One modular carry system, told differently across every context — and governed by the same approved source.</p>
         </div>
         <div className="intro-actions">
-          <button className="button button-primary" onClick={() => setView("revision")}>
+          <button className="button button-primary" onClick={() => setView("builder")}>
+            Create a campaign <Plus size={17} />
+          </button>
+          <button className="button button-outline" onClick={() => setView("revision")}>
             Revise campaign <ArrowUpRight size={17} />
           </button>
           <button className="button button-quiet" onClick={() => setView("canvas")}>Open canvas <ArrowRight size={16} /></button>
@@ -198,6 +284,318 @@ function CampaignHome() {
         <div><Command size={18} /><span>RECAST logic</span></div>
         <p>Facts drive blocks. Blocks shape outputs. Creative that has no dependency stays untouched.</p>
         <button onClick={() => setView("revision")}>See the graph <ArrowRight size={15} /></button>
+      </section>
+
+      <CampaignMemoryScroll onOpen={() => setView("intelligence")} />
+    </div>
+  );
+}
+
+function CampaignIntelligence() {
+  const [discipline, setDiscipline] = useState<(typeof campaignDisciplines)[number]>("All");
+  const [activeId, setActiveId] = useState("mean-joe");
+  const [challenge, setChallenge] = useState("Launch a modular backpack for people whose day changes without warning");
+  const [ideas, setIdeas] = useState(() => synthesizePatternIdeas(challenge));
+  const active = campaignCases.find((item) => item.id === activeId) ?? campaignCases[0];
+  const filtered = discipline === "All" ? campaignCases : campaignCases.filter((item) => item.discipline === discipline);
+
+  return (
+    <div className="view intelligence-view page-enter">
+      <section className="intelligence-hero">
+        <div>
+          <span className="micro-label">RESEARCH-GROUNDED CREATIVE MEMORY</span>
+          <h1>The model remembers<br /><em>why people cared.</em></h1>
+        </div>
+        <div className="intelligence-intro">
+          <p>RECAST turns landmark campaigns into reusable mechanics—not copy to imitate. Every pattern stays linked to the source, the cultural tension and the evidence that made it work.</p>
+          <div className="corpus-stats">
+            <div><strong>47</strong><span>years studied</span></div>
+            <div><strong>{campaignCases.length}</strong><span>campaign cases</span></div>
+            <div><strong>8</strong><span>creative mechanics</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="method-strip">
+        <div><BookOpen size={18} /><strong>Pattern Library · R1</strong></div>
+        <p>This working prototype uses a cited retrieval layer to steer ideation. It does not claim that these campaigns trained a foundation model.</p>
+        <span>Sources attached</span>
+      </section>
+
+      <section className="archive-section">
+        <div className="archive-heading">
+          <div><span className="micro-label">THE CAMPAIGN ARCHIVE</span><h2>Five decades. Eight ways into culture.</h2></div>
+          <div className="archive-search"><Search size={15} /><span>Filter the underlying mechanic</span></div>
+        </div>
+        <div className="discipline-filter" aria-label="Filter campaigns by creative mechanic">
+          {campaignDisciplines.map((item) => (
+            <button key={item} className={cx(discipline === item && "filter-active")} onClick={() => setDiscipline(item)} aria-pressed={discipline === item}>{item}</button>
+          ))}
+        </div>
+        <div className="archive-grid">
+          {filtered.map((campaign, index) => (
+            <article className={cx("archive-card", active.id === campaign.id && "archive-card-active")} key={campaign.id} style={{ "--case-accent": campaign.accent } as React.CSSProperties}>
+              <button className="archive-card-main" onClick={() => setActiveId(campaign.id)} aria-label={`Open ${campaign.name} case study`}>
+                <div className="archive-poster"><span>{campaign.year}</span><strong>{campaign.name}</strong><small>{campaign.brand}</small><i>{String(index + 1).padStart(2, "0")}</i></div>
+                <div className="archive-copy"><span>{campaign.discipline}</span><h3>{campaign.hook}</h3><p>{campaign.mechanic}</p></div>
+              </button>
+              <a href={campaign.sourceUrl} target="_blank" rel="noreferrer">{campaign.sourceLabel}<ExternalLink size={12} /></a>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="case-file" aria-live="polite">
+        <div className="case-index"><span>CASE FILE</span><strong>{active.year}</strong><small>{active.brand}</small></div>
+        <div className="case-main">
+          <div className="case-title"><span>{active.discipline} / {active.mechanic}</span><h2>{active.name}</h2><p>{active.hook}</p></div>
+          <div className="case-columns">
+            <article><span>WHAT IT DID</span><p>{active.originalMove}</p></article>
+            <article><span>WHY IT TRAVELLED</span><p>{active.whyItWorked}</p><small>{active.evidence}</small></article>
+            <article className="case-recast"><span>IF RECAST HAD BEEN THERE</span><p>{active.recastLift}</p></article>
+          </div>
+          <div className="case-logic" aria-label="RECAST campaign pattern flow">
+            <span>cultural signal</span><ArrowRight size={14} /><span>creative tension</span><ArrowRight size={14} /><span>channel roles</span><ArrowRight size={14} /><span>evidence lock</span>
+          </div>
+          <a className="case-source" href={active.sourceUrl} target="_blank" rel="noreferrer">Read the cited source · {active.sourceLabel}<ExternalLink size={13} /></a>
+        </div>
+      </section>
+
+      <section className="pattern-lab">
+        <div className="pattern-lab-intro">
+          <span className="micro-label">PATTERN SYNTHESIS LAB</span>
+          <h2>Do not copy the campaign.<br /><em>Transfer the intelligence.</em></h2>
+          <p>Describe a campaign challenge. RECAST retrieves useful mechanics, rewrites them around the new truth and keeps the historical inspiration visible.</p>
+          <label htmlFor="pattern-brief">Campaign challenge</label>
+          <textarea id="pattern-brief" value={challenge} onChange={(event) => setChallenge(event.target.value)} />
+          <button className="button button-primary" onClick={() => setIdeas(synthesizePatternIdeas(challenge))}><Sparkles size={16} /> Synthesize three directions</button>
+        </div>
+        <div className="pattern-results">
+          {ideas.map((idea, index) => (
+            <article key={`${idea.title}-${index}`}>
+              <span>0{index + 1} · {idea.mechanic}</span>
+              <h3>{idea.title}</h3>
+              <blockquote>{idea.hook}</blockquote>
+              <p>{idea.rationale}</p>
+              <small>Pattern trace · {idea.inspiredBy}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <footer className="research-footer">
+        <span>RECAST / CAMPAIGN INTELLIGENCE R1</span>
+        <p>Research is a launchpad for original thinking—not a license to reproduce protected creative.</p>
+        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Back to top ↑</button>
+      </footer>
+    </div>
+  );
+}
+
+const builderSteps = [
+  { id: 1, label: "Brand DNA", note: "Identity and voice", icon: Palette },
+  { id: 2, label: "Campaign brief", note: "Problem and proof", icon: Target },
+  { id: 3, label: "Creative system", note: "Patterns and channels", icon: Sparkles },
+  { id: 4, label: "Launch blueprint", note: "Team-ready plan", icon: FileCheck2 },
+];
+
+const availableChannels = ["Instagram", "LinkedIn", "YouTube Shorts", "Email", "X", "Out-of-home"];
+
+function channelRole(channel: string) {
+  const roles: Record<string, string> = {
+    Instagram: "Visual hook + saveable story",
+    LinkedIn: "Design reasoning + authority",
+    "YouTube Shorts": "12-second tension-to-proof film",
+    Email: "Launch narrative + conversion",
+    X: "Provocation + conversation loop",
+    "Out-of-home": "Single-minded memory structure",
+  };
+  return roles[channel] ?? "Channel-specific campaign role";
+}
+
+function CampaignBuilder() {
+  const { setView } = useCampaignStore();
+  const { draft, ideas, selectedIdeaIndex, generatedAt, updateDraft, toggleChannel, generateIdeas, selectIdea } = useWorkspaceStore();
+  const [step, setStep] = useState(1);
+  const selectedIdea = ideas[selectedIdeaIndex] ?? ideas[0];
+  const readiness = [
+    Boolean(draft.brandName && draft.productName && draft.tone),
+    Boolean(draft.challenge && draft.audience && draft.objective && draft.proof),
+    Boolean(draft.channels.length && ideas.length),
+    Boolean(selectedIdea),
+  ];
+
+  const exportBlueprint = () => downloadFile("recast-campaign-blueprint.json", JSON.stringify({
+    brand: draft,
+    direction: selectedIdea,
+    outputs: draft.channels.map((channel) => ({ channel, role: channelRole(channel) })),
+    generatedAt: generatedAt ?? new Date().toISOString(),
+    provenance: "RECAST Pattern Library R1",
+  }, null, 2), "application/json");
+
+  return (
+    <div className="view builder-view page-enter">
+      <section className="builder-hero">
+        <div><span className="micro-label">END-TO-END CAMPAIGN CREATION</span><h1>From brand truth<br /><em>to a team-ready system.</em></h1></div>
+        <div><p>Build one campaign source, retrieve useful creative mechanics, assign every channel a job and hand the work to a studio with approvals already attached.</p><span><i /> Saved locally in this workspace</span></div>
+      </section>
+
+      <div className="builder-layout">
+        <aside className="builder-steps" aria-label="Campaign builder steps">
+          <div className="builder-progress"><span>Build progress</span><strong>{readiness.filter(Boolean).length}/4</strong><i><b style={{ width: `${readiness.filter(Boolean).length * 25}%` }} /></i></div>
+          {builderSteps.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button key={item.id} className={cx(step === item.id && "builder-step-active")} onClick={() => setStep(item.id)} aria-current={step === item.id ? "step" : undefined} data-testid={`builder-step-${item.id}`}>
+                <span>0{item.id}</span><Icon size={17} /><div><strong>{item.label}</strong><small>{item.note}</small></div>{readiness[item.id - 1] && <Check size={14} />}
+              </button>
+            );
+          })}
+          <div className="builder-help"><BookOpen size={17} /><div><strong>Need inspiration?</strong><p>Open the campaign memory and bring a proven mechanic back into this brief.</p><button onClick={() => setView("intelligence")}>Browse intelligence <ArrowRight size={13} /></button></div></div>
+        </aside>
+
+        <section className="builder-panel">
+          <div className="builder-panel-head"><div><span>STEP 0{step} / 04</span><h2>{builderSteps[step - 1].label}</h2></div><span>{readiness[step - 1] ? <><CheckCircle2 size={14} /> Complete</> : "In progress"}</span></div>
+
+          {step === 1 && (
+            <div className="builder-form page-enter">
+              <div className="form-explainer"><strong>Teach RECAST the brand before asking it for ideas.</strong><p>These inputs become reusable guardrails for every campaign, output and revision.</p></div>
+              <div className="field-grid">
+                <label><span>Brand name</span><input value={draft.brandName} onChange={(event) => updateDraft({ brandName: event.target.value })} /></label>
+                <label><span>Product or offer</span><input value={draft.productName} onChange={(event) => updateDraft({ productName: event.target.value })} /></label>
+                <label className="field-wide"><span>Voice and tone</span><input value={draft.tone} onChange={(event) => updateDraft({ tone: event.target.value })} /></label>
+                <label><span>Market / language</span><input value={draft.market} onChange={(event) => updateDraft({ market: event.target.value })} /></label>
+                <div className="brand-colours"><span>Brand colours</span><label><input type="color" value={draft.primaryColor} onChange={(event) => updateDraft({ primaryColor: event.target.value })} /><strong>{draft.primaryColor}</strong></label><label><input type="color" value={draft.accentColor} onChange={(event) => updateDraft({ accentColor: event.target.value })} /><strong>{draft.accentColor}</strong></label></div>
+              </div>
+              <div className="brand-preview" style={{ "--brand-primary": draft.primaryColor, "--brand-accent": draft.accentColor } as React.CSSProperties}><span>{draft.brandName || "YOUR BRAND"}</span><strong>{draft.productName || "Campaign system"}</strong><small>{draft.tone || "Define the voice"}</small><i /></div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="builder-form page-enter">
+              <div className="form-explainer"><strong>A sharp brief gives creativity something to push against.</strong><p>Separate the human problem, business objective and approved proof so the model knows where it can invent—and where it cannot.</p></div>
+              <div className="field-grid brief-fields">
+                <label className="field-wide"><span>Campaign challenge</span><textarea data-testid="campaign-challenge" value={draft.challenge} onChange={(event) => updateDraft({ challenge: event.target.value })} /></label>
+                <label><span>Audience</span><textarea value={draft.audience} onChange={(event) => updateDraft({ audience: event.target.value })} /></label>
+                <label><span>Business objective</span><textarea value={draft.objective} onChange={(event) => updateDraft({ objective: event.target.value })} /></label>
+                <label className="field-wide"><span>Single-minded promise</span><input value={draft.promise} onChange={(event) => updateDraft({ promise: event.target.value })} /></label>
+                <label className="field-wide"><span>Approved proof / claims</span><textarea value={draft.proof} onChange={(event) => updateDraft({ proof: event.target.value })} /></label>
+                <label><span>Launch deadline</span><input type="date" value={draft.deadline} onChange={(event) => updateDraft({ deadline: event.target.value })} /></label>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="builder-form page-enter">
+              <div className="channel-picker"><div><span className="micro-label">CHANNEL JOBS</span><h3>Choose where this campaign must work.</h3></div><div>{availableChannels.map((channel) => <button key={channel} onClick={() => toggleChannel(channel)} className={cx(draft.channels.includes(channel) && "channel-active")} aria-pressed={draft.channels.includes(channel)}>{draft.channels.includes(channel) && <Check size={13} />}{channel}</button>)}</div></div>
+              <div className="generation-bar"><div><Sparkles size={19} /><span><strong>Pattern Engine · R1</strong><small>Uses your challenge to retrieve useful campaign mechanics.</small></span></div><button className="button button-primary" onClick={generateIdeas} data-testid="generate-directions">Generate directions <ArrowRight size={15} /></button></div>
+              <div className="generated-directions">
+                {ideas.map((idea, index) => (
+                  <button key={idea.title} onClick={() => selectIdea(index)} className={cx(selectedIdeaIndex === index && "direction-active")} aria-pressed={selectedIdeaIndex === index}>
+                    <span>0{index + 1} · {idea.mechanic}</span><h3>{idea.title}</h3><p>{idea.hook}</p><small>{idea.inspiredBy}</small>{selectedIdeaIndex === index && <i><Check size={13} /> Selected</i>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="launch-blueprint page-enter" data-testid="launch-blueprint">
+              <div className="blueprint-cover" style={{ "--brand-primary": draft.primaryColor, "--brand-accent": draft.accentColor } as React.CSSProperties}>
+                <span>{draft.brandName} / CAMPAIGN BLUEPRINT</span><h3>{selectedIdea.title}</h3><p>{selectedIdea.hook}</p><div><small>Promise</small><strong>{draft.promise}</strong></div>
+              </div>
+              <div className="blueprint-detail">
+                <div className="blueprint-meta"><div><span>Audience</span><strong>{draft.audience}</strong></div><div><span>Objective</span><strong>{draft.objective}</strong></div><div><span>Launch</span><strong>{draft.deadline}</strong></div></div>
+                <div className="output-plan"><span className="micro-label">CHANNEL ARCHITECTURE</span>{draft.channels.map((channel, index) => <article key={channel}><span>0{index + 1}</span><div><strong>{channel}</strong><small>{channelRole(channel)}</small></div><CheckCircle2 size={16} /></article>)}</div>
+                <div className="blueprint-trace"><BookOpen size={17} /><div><strong>Pattern provenance stays visible</strong><span>{selectedIdea.rationale} Trace: {selectedIdea.inspiredBy}.</span></div></div>
+                <div className="blueprint-actions"><button className="button button-primary" onClick={() => setView("team")}><Users size={16} /> Open team studio</button><button className="button button-outline" onClick={exportBlueprint}><Download size={16} /> Export blueprint</button></div>
+              </div>
+            </div>
+          )}
+
+          <div className="builder-controls"><button className="button button-quiet" onClick={() => setStep((current) => Math.max(1, current - 1))} disabled={step === 1}>← Back</button><span>Changes save automatically</span>{step < 4 ? <button className="button button-primary" onClick={() => setStep((current) => Math.min(4, current + 1))}>Save & continue <ArrowRight size={15} /></button> : <button className="button button-primary" onClick={() => setView("team")}>Invite the team <UserPlus size={15} /></button>}</div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+const workStatuses: WorkStatus[] = ["Brief", "Making", "Review", "Approved"];
+const teamRoles: TeamRole[] = ["Brand lead", "Strategist", "Copywriter", "Designer", "Reviewer"];
+
+function TeamStudio() {
+  const { setView } = useCampaignStore();
+  const { draft, ideas, selectedIdeaIndex, members, tasks, comments, addMember, moveTask, addComment } = useWorkspaceStore();
+  const [memberName, setMemberName] = useState("");
+  const [memberRole, setMemberRole] = useState<TeamRole>("Reviewer");
+  const [comment, setComment] = useState("");
+  const selectedIdea = ideas[selectedIdeaIndex] ?? ideas[0];
+  const approved = tasks.filter((task) => task.status === "Approved").length;
+
+  function submitMember() {
+    if (!memberName.trim()) return;
+    addMember(memberName, memberRole);
+    setMemberName("");
+  }
+
+  function submitComment() {
+    if (!comment.trim()) return;
+    addComment(comment);
+    setComment("");
+  }
+
+  return (
+    <div className="view team-view page-enter">
+      <section className="team-hero">
+        <div><span className="micro-label">SHARED CAMPAIGN ROOM</span><h1>One room for the work<br /><em>and the decisions.</em></h1></div>
+        <div className="team-pulse"><span>Studio pulse</span><strong>{approved}/{tasks.length}</strong><small>workstreams approved</small><i><b style={{ width: `${(approved / tasks.length) * 100}%` }} /></i></div>
+      </section>
+
+      <section className="workspace-ribbon">
+        <div><span>ACTIVE CAMPAIGN</span><strong>{draft.brandName} · {draft.productName}</strong></div>
+        <div><span>DIRECTION</span><strong>{selectedIdea.title}</strong></div>
+        <div><span>LAUNCH</span><strong><CalendarDays size={13} /> {draft.deadline}</strong></div>
+        <button onClick={() => setView("builder")}>Edit campaign source <ArrowRight size={14} /></button>
+      </section>
+
+      <div className="team-dashboard">
+        <section className="team-board">
+          <div className="team-section-head"><div><span className="micro-label">LIVE WORKBOARD</span><h2>From brief to approved.</h2></div><span>{tasks.length} workstreams</span></div>
+          <div className="kanban-grid">
+            {workStatuses.map((status) => (
+              <div className={`kanban-column kanban-${status.toLowerCase()}`} key={status}>
+                <div className="kanban-head"><span>{status}</span><strong>{tasks.filter((task) => task.status === status).length}</strong></div>
+                {tasks.filter((task) => task.status === status).map((task) => {
+                  const owner = members.find((member) => member.id === task.ownerId);
+                  return <article key={task.id}><span>{owner?.initials ?? "TM"}</span><h3>{task.title}</h3><div><small>{owner?.name ?? "Unassigned"}</small><small>{task.due}</small></div><label><span>Move to</span><select value={task.status} onChange={(event) => moveTask(task.id, event.target.value as WorkStatus)} aria-label={`Move ${task.title}`} data-testid={`task-status-${task.id}`}>{workStatuses.map((item) => <option key={item}>{item}</option>)}</select></label></article>;
+                })}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <aside className="studio-sidebar">
+          <section className="collaborators-panel">
+            <div className="panel-heading"><div><span>People</span><strong>{members.length} collaborators</strong></div><Users size={17} /></div>
+            <div className="member-list">{members.map((member) => <article key={member.id}><span>{member.initials}<i className={member.presence === "online" ? "member-online" : ""} /></span><div><strong>{member.name}</strong><small>{member.role}</small></div></article>)}</div>
+            <div className="member-form"><input placeholder="Collaborator name" value={memberName} onChange={(event) => setMemberName(event.target.value)} /><select value={memberRole} onChange={(event) => setMemberRole(event.target.value as TeamRole)}>{teamRoles.map((role) => <option key={role}>{role}</option>)}</select><button onClick={submitMember} disabled={!memberName.trim()} aria-label="Add collaborator"><UserPlus size={15} /></button></div>
+          </section>
+
+          <section className="approval-gates">
+            <div className="panel-heading"><div><span>Approval gates</span><strong>Decision ownership</strong></div><ShieldCheck size={17} /></div>
+            <article><span className="gate-ready"><Check size={13} /></span><div><strong>Strategy</strong><small>Direction selected · Mira Sen</small></div><StatusPill status="ready" /></article>
+            <article><span className="gate-review"><CircleAlert size={13} /></span><div><strong>Claims</strong><small>2 facts need brand review · JE</small></div><StatusPill status="needs_review" /></article>
+            <article><span className="gate-review"><CircleAlert size={13} /></span><div><strong>Final creative</strong><small>{tasks.filter((task) => task.status !== "Approved").length} workstreams open</small></div><StatusPill status="stale" /></article>
+          </section>
+        </aside>
+      </div>
+
+      <section className="decision-room">
+        <div className="decision-intro"><span className="micro-label">DECISION THREAD</span><h2>Feedback stays attached<br />to the campaign.</h2><p>Comments carry context, owners and timing so the final approval does not depend on finding the right message in a different app.</p></div>
+        <div className="comment-panel">
+          <div className="comment-list">{comments.slice(-5).map((item) => <article key={item.id}><span>{item.initials}</span><div><div><strong>{item.author}</strong><small>{item.context} · {new Date(item.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</small></div><p>{item.body}</p></div></article>)}</div>
+          <div className="comment-compose"><MessageSquare size={17} /><input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Add a decision, question or feedback…" onKeyDown={(event) => { if (event.key === "Enter") submitComment(); }} /><button onClick={submitComment} disabled={!comment.trim()}>Post</button></div>
+        </div>
       </section>
     </div>
   );
@@ -495,6 +893,9 @@ function ReviewPublish() {
 
 function CurrentView() {
   const view = useCampaignStore((state) => state.view);
+  if (view === "builder") return <CampaignBuilder />;
+  if (view === "intelligence") return <CampaignIntelligence />;
+  if (view === "team") return <TeamStudio />;
   if (view === "source") return <SourceTruth />;
   if (view === "concepts") return <ConceptSelection />;
   if (view === "canvas") return <CampaignCanvas />;
@@ -506,7 +907,7 @@ function CurrentView() {
 export function CampaignStudio() {
   const [loading, setLoading] = useState(true);
   const [navOpen, setNavOpen] = useState(false);
-  const { notice, clearNotice } = useCampaignStore();
+  const { notice, clearNotice, view } = useCampaignStore();
 
   useEffect(() => {
     const timer = window.setTimeout(() => setLoading(false), 260);
@@ -518,6 +919,10 @@ export function CampaignStudio() {
     const timer = window.setTimeout(clearNotice, 3200);
     return () => window.clearTimeout(timer);
   }, [notice, clearNotice]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [view]);
 
   if (loading) {
     return <main className="loading-screen"><div className="loading-mark">R<i /></div><p>Connecting campaign source</p><span><i /></span></main>;
