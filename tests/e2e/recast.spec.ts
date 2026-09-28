@@ -60,6 +60,7 @@ test("judge flow: revise, guard, approve, and export", async ({ page }) => {
 
   await page.getByTestId("nav-review").click();
   await page.getByTestId("approve-all").click();
+  await page.getByTestId("approve-creative-quality").click();
   await expect(page.getByText("approved to export", { exact: true })).toBeVisible();
 
   const downloadPromise = page.waitForEvent("download");
@@ -131,4 +132,13 @@ test("brand team can create a campaign and move work through the studio", async 
 
   const layout = await page.evaluate(() => ({ viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth }));
   expect(layout.documentWidth).toBe(layout.viewportWidth);
+});
+
+test("studio switcher provides fast keyboard navigation", async ({ page }) => {
+  await openStudio(page);
+  await page.keyboard.press("Meta+k");
+  await expect(page.getByTestId("studio-switcher")).toBeVisible();
+  await page.getByPlaceholder("Search campaign tools…").fill("intelligence");
+  await page.getByTestId("command-intelligence").click();
+  await expect(page.getByRole("heading", { name: "The model remembers why people cared." })).toBeVisible();
 });

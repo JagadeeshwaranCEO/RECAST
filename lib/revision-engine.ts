@@ -190,7 +190,7 @@ export function validateCampaign(campaign: Campaign): ValidationResult[] {
     { id: "check.claims", label: "Approved claims", status: factualEdgesValid ? "ready" : "unsupported", evidence: factualEdgesValid ? "Every factual block maps to a current approved fact ID." : "A factual block has no current approved source.", humanJudgment: false },
     { id: "check.integrity", label: "Asset integrity", status: integrityPreserved ? "preserved" : "needs_review", evidence: integrityPreserved ? "4 locked image/logo hashes match the approved baseline." : "A locked asset hash changed.", humanJudgment: false },
     { id: "check.layout", label: "Layout fit", status: layoutFits ? "ready" : "needs_review", evidence: layoutFits ? "All selected templates pass deterministic character-fit checks." : "At least one text block exceeds its template limit.", humanJudgment: false },
-    { id: "check.revision", label: "Revision status", status: staleCount ? "stale" : "ready", evidence: staleCount ? `${staleCount} changed output${staleCount === 1 ? "" : "s"} require reapproval.` : "All outputs are approved for export.", humanJudgment: false },
+    { id: "check.revision", label: "Revision status", status: staleCount ? "stale" : "ready", evidence: staleCount ? `${staleCount} changed output${staleCount === 1 ? "" : "s"} require reapproval.` : "All changed outputs are approved against the current source.", humanJudgment: false },
     { id: "check.tone", label: "Tone & aesthetic quality", status: "needs_review", evidence: "Requires human judgment; RECAST does not claim automated verification.", humanJudgment: true },
   ];
 }
@@ -198,4 +198,3 @@ export function validateCampaign(campaign: Campaign): ValidationResult[] {
 export function exportCampaign(campaign: Campaign) {
   return CampaignSchema.parse(campaign);
 }
-

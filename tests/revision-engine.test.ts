@@ -7,6 +7,7 @@ import {
   reviseFact,
   StaleRevisionError,
   UnsupportedClaimError,
+  validateCampaign,
 } from "@/lib/revision-engine";
 
 describe("RECAST revision engine", () => {
@@ -66,5 +67,16 @@ describe("RECAST revision engine", () => {
     const serialized = JSON.stringify(exported);
     expect(() => JSON.parse(serialized)).not.toThrow();
     expect(CampaignSchema.safeParse(JSON.parse(serialized)).success).toBe(true);
+  });
+
+  it("keeps automated evidence checks separate from human creative approval", () => {
+    const checks = validateCampaign(createSeedCampaign());
+    const revision = checks.find((check) => check.id === "check.revision");
+    const tone = checks.find((check) => check.id === "check.tone");
+
+    expect(revision?.status).toBe("ready");
+    expect(revision?.evidence).toContain("current source");
+    expect(revision?.evidence).not.toContain("approved for export");
+    expect(tone).toMatchObject({ status: "needs_review", humanJudgment: true });
   });
 });

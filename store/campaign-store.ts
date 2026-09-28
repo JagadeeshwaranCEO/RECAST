@@ -11,11 +11,13 @@ type CampaignState = {
   campaign: Campaign;
   view: StudioView;
   notice: string | null;
+  humanApproval: boolean;
   setView: (view: StudioView) => void;
   revisePrice: (nextPrice: string) => void;
   removeRecycledClaim: () => void;
   approveAsset: (assetId: string) => void;
   approveAffected: () => void;
+  approveCreativeQuality: () => void;
   updateBrandRule: (id: string, value: string) => void;
   selectConcept: (id: string) => void;
   clearNotice: () => void;
@@ -38,6 +40,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   campaign: createSeedCampaign(),
   view: "home",
   notice: null,
+  humanApproval: false,
   setView: (view) => set({ view }),
   revisePrice: (nextPrice) => {
     const source = get().campaign;
@@ -46,7 +49,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       nextValue: nextPrice,
       baseCampaignVersion: source.version,
     });
-    set({ campaign: result.campaign, view: "revision", notice: "Price revision mapped across the campaign." });
+    set({ campaign: result.campaign, view: "revision", humanApproval: false, notice: "Price revision mapped across the campaign." });
   },
   removeRecycledClaim: () => {
     const source = get().campaign;
@@ -56,7 +59,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
       baseCampaignVersion: source.version,
       mode: "remove",
     });
-    set({ campaign: result.campaign, view: "revision", notice: "Recycled nylon claim removed from connected blocks only." });
+    set({ campaign: result.campaign, view: "revision", humanApproval: false, notice: "Recycled nylon claim removed from connected blocks only." });
   },
   approveAsset: (assetId) => set((state) => ({
     campaign: finalizeApprovalState({
@@ -74,8 +77,12 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
         ? { ...approval, status: "approved" as const, reviewer: "Jagadeeshwaran · Reviewer", updatedAt: new Date().toISOString() }
         : approval),
     }),
-    notice: "All affected outputs are approved and export-ready.",
+    notice: "All affected outputs are approved against the current source.",
   })),
+  approveCreativeQuality: () => set({
+    humanApproval: true,
+    notice: "Creative quality signed off by the human reviewer.",
+  }),
   updateBrandRule: (id, value) => set((state) => ({
     campaign: {
       ...state.campaign,
@@ -95,5 +102,5 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
     };
   }),
   clearNotice: () => set({ notice: null }),
-  resetDemo: () => set({ campaign: createSeedCampaign(), view: "home", notice: "Demo campaign restored to its approved source." }),
+  resetDemo: () => set({ campaign: createSeedCampaign(), view: "home", humanApproval: false, notice: "Demo campaign restored to its approved source." }),
 }));

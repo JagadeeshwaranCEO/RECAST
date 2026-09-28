@@ -143,7 +143,7 @@ function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
-function AppHeader({ onMenu }: { onMenu: () => void }) {
+function AppHeader({ onMenu, onCommand }: { onMenu: () => void; onCommand: () => void }) {
   const { campaign, view, resetDemo } = useCampaignStore();
   const meta = viewTitles[view];
   return (
@@ -156,10 +156,46 @@ function AppHeader({ onMenu }: { onMenu: () => void }) {
       <div className="header-meta">
         <span className="source-version"><CircleDot size={13} /> Source v{campaign.version}</span>
         <span className="header-note">{meta.note}</span>
+        <button className="header-command" onClick={onCommand} aria-label="Open studio switcher"><Command size={14} /><span>Switch</span><kbd>⌘K</kbd></button>
         <button className="icon-button" onClick={resetDemo} aria-label="Reset demo campaign" title="Reset demo"><RotateCcw size={17} /></button>
         <span className="avatar">JE</span>
       </div>
     </header>
+  );
+}
+
+function StudioSwitcher({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const view = useCampaignStore((state) => state.view);
+  const setView = useCampaignStore((state) => state.setView);
+  const [query, setQuery] = useState("");
+  const matches = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return navItems;
+    return navItems.filter((item) => `${item.label} ${item.short} ${viewTitles[item.id].note}`.toLowerCase().includes(normalized));
+  }, [query]);
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.classList.add("command-active");
+    return () => document.body.classList.remove("command-active");
+  }, [open]);
+
+  if (!open) return null;
+  return (
+    <div className="command-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="command-menu" role="dialog" aria-modal="true" aria-labelledby="command-title" data-testid="studio-switcher">
+        <div className="command-head"><div><span>RECAST / NAVIGATE</span><h2 id="command-title">Where do you want to work?</h2></div><button onClick={onClose} aria-label="Close studio switcher"><X size={17} /></button></div>
+        <label className="command-search"><Search size={17} /><span className="sr-only">Search studio destinations</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search campaign tools…" /></label>
+        <div className="command-results">
+          {matches.map((item, index) => {
+            const Icon = item.icon;
+            return <button key={item.id} className={cx(view === item.id && "command-current")} onClick={() => { setView(item.id); onClose(); }} data-testid={`command-${item.id}`}><span>0{index + 1}</span><Icon size={18} /><div><strong>{item.label}</strong><small>{viewTitles[item.id].note}</small></div><ChevronRight size={15} /></button>;
+          })}
+          {!matches.length && <div className="command-empty">No studio destination matches “{query}”.</div>}
+        </div>
+        <footer><span><kbd>type</kbd> to filter</span><span><kbd>esc</kbd> close</span></footer>
+      </section>
+    </div>
   );
 }
 
@@ -229,8 +265,9 @@ function CampaignMemoryScroll({ onOpen }: { onOpen: () => void }) {
 }
 
 function CampaignHome() {
-  const { campaign, setView } = useCampaignStore();
+  const { campaign, humanApproval, setView } = useCampaignStore();
   const reviewCount = campaign.approvals.filter((item) => item.status !== "approved").length;
+  const decisionCount = reviewCount + (humanApproval ? 0 : 1);
   const currentFacts = campaign.facts.filter((fact) => fact.status === "approved").length;
   return (
     <div className="view home-view page-enter">
@@ -267,7 +304,7 @@ function CampaignHome() {
       <section className="health-grid">
         <div className="health-title">
           <span className="micro-label">Campaign health</span>
-          <strong>{reviewCount ? "Revision in review" : "One source. Fully aligned."}</strong>
+          <strong>{reviewCount ? "Revision in review" : humanApproval ? "One source. Fully aligned." : "Final sign-off needed."}</strong>
         </div>
         <button onClick={() => setView("source")} className="health-stat">
           <span>Approved facts</span><strong>{currentFacts}</strong><small>Current source <ChevronRight size={14} /></small>
@@ -276,7 +313,7 @@ function CampaignHome() {
           <span>Outputs ready</span><strong>{campaign.assets.length - reviewCount}<i>/{campaign.assets.length}</i></strong><small>Connected canvas <ChevronRight size={14} /></small>
         </button>
         <button onClick={() => setView("review")} className="health-stat health-review">
-          <span>Needs review</span><strong>{reviewCount}</strong><small>{reviewCount ? "Approval changed" : "Nothing outstanding"} <ChevronRight size={14} /></small>
+          <span>Needs review</span><strong>{decisionCount}</strong><small>{reviewCount ? "Approval changed" : humanApproval ? "Nothing outstanding" : "Human sign-off"} <ChevronRight size={14} /></small>
         </button>
       </section>
 
@@ -483,19 +520,19 @@ function CampaignBuilder() {
     direction: selectedIdea,
     outputs: draft.channels.map((channel) => ({ channel, role: channelRole(channel) })),
     generatedAt: generatedAt ?? new Date().toISOString(),
-    provenance: "RECAST Pattern Library R1",
+    provenance: "RECAST Pattern Library R2",
   }, null, 2), "application/json");
 
   return (
     <div className="view builder-view page-enter">
       <section className="builder-hero">
         <div><span className="micro-label">END-TO-END CAMPAIGN CREATION</span><h1>From brand truth<br /><em>to a team-ready system.</em></h1></div>
-        <div><p>Build one campaign source, retrieve useful creative mechanics, assign every channel a job and hand the work to a studio with approvals already attached.</p><span><i /> Saved locally in this workspace</span></div>
+        <div><p>Build one campaign source, retrieve useful creative mechanics, assign every channel a job and hand the work to a studio with approvals already attached.</p><span><i /> Autosaved to this device</span></div>
       </section>
 
       <div className="builder-layout">
         <aside className="builder-steps" aria-label="Campaign builder steps">
-          <div className="builder-progress"><span>Build progress</span><strong>{readiness.filter(Boolean).length}/4</strong><i><b style={{ width: `${readiness.filter(Boolean).length * 25}%` }} /></i></div>
+          <div className="builder-progress"><span>Workflow progress</span><strong>0{step}/04</strong><i><b style={{ width: `${step * 25}%` }} /></i><small>{readiness.filter(Boolean).length} of 4 sections have required inputs</small></div>
           {builderSteps.map((item) => {
             const Icon = item.icon;
             return (
@@ -541,7 +578,7 @@ function CampaignBuilder() {
           {step === 3 && (
             <div className="builder-form page-enter">
               <div className="channel-picker"><div><span className="micro-label">CHANNEL JOBS</span><h3>Choose where this campaign must work.</h3></div><div>{availableChannels.map((channel) => <button key={channel} onClick={() => toggleChannel(channel)} className={cx(draft.channels.includes(channel) && "channel-active")} aria-pressed={draft.channels.includes(channel)}>{draft.channels.includes(channel) && <Check size={13} />}{channel}</button>)}</div></div>
-              <div className="generation-bar"><div><Sparkles size={19} /><span><strong>Pattern Engine · R1</strong><small>Uses your challenge to retrieve useful campaign mechanics.</small></span></div><button className="button button-primary" onClick={generateIdeas} data-testid="generate-directions">Generate directions <ArrowRight size={15} /></button></div>
+              <div className="generation-bar"><div><Sparkles size={19} /><span><strong>Pattern Engine · R2</strong><small>Uses your challenge to retrieve useful, evidence-separated campaign mechanics.</small></span></div><button className="button button-primary" onClick={generateIdeas} data-testid="generate-directions">Generate directions <ArrowRight size={15} /></button></div>
               <div className="generated-directions">
                 {ideas.map((idea, index) => (
                   <button key={idea.title} onClick={() => selectIdea(index)} className={cx(selectedIdeaIndex === index && "direction-active")} aria-pressed={selectedIdeaIndex === index}>
@@ -566,7 +603,7 @@ function CampaignBuilder() {
             </div>
           )}
 
-          <div className="builder-controls"><button className="button button-quiet" onClick={() => setStep((current) => Math.max(1, current - 1))} disabled={step === 1}>← Back</button><span>Changes save automatically</span>{step < 4 ? <button className="button button-primary" onClick={() => setStep((current) => Math.min(4, current + 1))}>Save & continue <ArrowRight size={15} /></button> : <button className="button button-primary" onClick={() => setView("team")}>Invite the team <UserPlus size={15} /></button>}</div>
+          <div className="builder-controls"><button className="button button-quiet" onClick={() => setStep((current) => Math.max(1, current - 1))} disabled={step === 1}>← Back</button><span>Autosaved to this device</span>{step < 4 ? <button className="button button-primary" disabled={!readiness[step - 1]} onClick={() => setStep((current) => Math.min(4, current + 1))}>Continue to {builderSteps[step].label} <ArrowRight size={15} /></button> : <button className="button button-primary" onClick={() => setView("team")}>Invite the team <UserPlus size={15} /></button>}</div>
         </section>
       </div>
     </div>
@@ -893,11 +930,15 @@ function ValidationRow({ result }: { result: ValidationResult }) {
 }
 
 function ReviewPublish() {
-  const { campaign, approveAsset, approveAffected } = useCampaignStore();
+  const { campaign, humanApproval, approveAsset, approveAffected, approveCreativeQuality } = useCampaignStore();
   const checks = useMemo(() => validateCampaign(campaign), [campaign]);
   const latest = campaign.revisions[0];
   const stale = campaign.approvals.filter((approval) => approval.status === "stale");
   const linkedin = campaign.assets.find((asset) => asset.id === "asset.linkedin");
+  const exportReady = stale.length === 0 && humanApproval;
+  const displayChecks = checks.map((check) => check.id === "check.tone" && humanApproval
+    ? { ...check, status: "ready" as const, evidence: "Creative quality approved by Jagadeeshwaran · Human reviewer." }
+    : check);
 
   const downloadCampaign = () => downloadFile("recast-stride-campaign.json", JSON.stringify(exportCampaign(campaign), null, 2), "application/json");
   const downloadRevision = () => downloadFile("recast-revision-report.md", latest?.report ?? "# RECAST revision report\n\nNo revision has been created yet.", "text/markdown");
@@ -906,13 +947,14 @@ function ReviewPublish() {
   return (
     <div className="view page-enter review-view">
       <div className="review-hero">
-        <div><span className="micro-label">PUBLISH READINESS</span><h1>{stale.length ? "The change is sound.\nThe decision is yours." : "Campaign ready.\nEvery source is current."}</h1><p>Machine checks show evidence. Tone and visual quality stay explicitly human.</p></div>
-        <div className={cx("readiness-seal", !stale.length && "seal-ready")}><span>{stale.length ? `${stale.length}` : <Check size={38} />}</span><strong>{stale.length ? "outputs need review" : "approved to export"}</strong><small>Campaign source v{campaign.version}</small></div>
+        <div><span className="micro-label">PUBLISH READINESS</span><h1>{stale.length ? "The change is sound.\nThe decision is yours." : humanApproval ? "Campaign ready.\nEvery source is current." : "Evidence clear.\nOne human decision left."}</h1><p>Machine checks show evidence. Tone and visual quality stay explicitly human.</p></div>
+        <div className={cx("readiness-seal", exportReady && "seal-ready")}><span>{stale.length ? `${stale.length}` : humanApproval ? <Check size={38} /> : "01"}</span><strong>{stale.length ? "outputs need review" : humanApproval ? "approved to export" : "human sign-off needed"}</strong><small>Campaign source v{campaign.version}</small></div>
       </div>
       <div className="review-layout">
         <section className="check-panel">
           <div className="panel-heading"><div><span>Quality gates</span><strong>Checks with evidence</strong></div><ShieldCheck size={18} /></div>
-          <div className="validation-list">{checks.map((check) => <ValidationRow key={check.id} result={check} />)}</div>
+          <div className="validation-list">{displayChecks.map((check) => <ValidationRow key={check.id} result={check} />)}</div>
+          <div className={cx("human-signoff", humanApproval && "human-signoff-complete")}><div><span>{humanApproval ? <Check size={15} /> : <CircleAlert size={15} />}</span><div><strong>{humanApproval ? "Creative quality signed off" : "Human review required"}</strong><p>{humanApproval ? "Tone, craft and brand feel were approved for this source version." : "Review tone, visual craft and cultural fit before enabling export."}</p></div></div><button onClick={approveCreativeQuality} disabled={humanApproval} data-testid="approve-creative-quality">{humanApproval ? "Signed off" : "Sign off creative quality"}</button></div>
         </section>
         <section className="approval-panel">
           <div className="panel-heading"><div><span>Human approval</span><strong>Changed outputs only</strong></div><span>{stale.length} pending</span></div>
@@ -929,10 +971,10 @@ function ReviewPublish() {
       <section className="export-panel">
         <div><span className="micro-label">EXPORT DESK</span><h2>Take the approved campaign with you.</h2><p>Portable source, audit trail and channel copy. Nothing is trapped in RECAST.</p></div>
         <div className="export-actions">
-          <button onClick={downloadCampaign}><Download size={17} /><span><strong>Campaign brief</strong><small>Validated JSON</small></span></button>
-          <button onClick={downloadRevision} data-testid="export-revision"><Download size={17} /><span><strong>Revision report</strong><small>Markdown audit trail</small></span></button>
-          <button onClick={downloadLinkedIn}><Download size={17} /><span><strong>LinkedIn post</strong><small>Plain text</small></span></button>
-          <button onClick={() => downloadFile("stride-reel-preview.txt", "SIMULATED PREVIEW EXPORT\n\n12-second Stride context-shift reel scene plan. Connect a renderer for final MP4 output.")}><PanelTop size={17} /><span><strong>Reel preview</strong><small>Simulated export · TXT</small></span></button>
+          <button onClick={downloadCampaign} disabled={!exportReady}><Download size={17} /><span><strong>Campaign brief</strong><small>{exportReady ? "Validated JSON" : "Awaiting human sign-off"}</small></span></button>
+          <button onClick={downloadRevision} disabled={!exportReady} data-testid="export-revision"><Download size={17} /><span><strong>Revision report</strong><small>{exportReady ? "Markdown audit trail" : "Awaiting human sign-off"}</small></span></button>
+          <button onClick={downloadLinkedIn} disabled={!exportReady}><Download size={17} /><span><strong>LinkedIn post</strong><small>{exportReady ? "Plain text" : "Awaiting human sign-off"}</small></span></button>
+          <button disabled={!exportReady} onClick={() => downloadFile("stride-reel-preview.txt", "SIMULATED PREVIEW EXPORT\n\n12-second Stride context-shift reel scene plan. Connect a renderer for final MP4 output.")}><PanelTop size={17} /><span><strong>Reel preview</strong><small>{exportReady ? "Simulated export · TXT" : "Awaiting human sign-off"}</small></span></button>
         </div>
       </section>
 
@@ -1024,6 +1066,7 @@ function CinematicIntro({ onComplete }: { onComplete: () => void }) {
 export function CampaignStudio() {
   const [showIntro, setShowIntro] = useState(true);
   const [navOpen, setNavOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
   const { notice, clearNotice, view } = useCampaignStore();
 
   const completeIntro = () => {
@@ -1048,17 +1091,31 @@ export function CampaignStudio() {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [view]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen((current) => !current);
+      }
+      if (event.key === "Escape") setCommandOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   return (
     <>
+      <a className="skip-link" href="#studio-content">Skip to campaign workspace</a>
       {showIntro && <CinematicIntro onComplete={completeIntro} />}
       <div className={cx("studio-shell", showIntro && "studio-awaiting")}>
         <AppSidebar open={navOpen} onClose={() => setNavOpen(false)} />
         {navOpen && <button className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Close navigation overlay" />}
         <div className="studio-main">
-          <AppHeader onMenu={() => setNavOpen(true)} />
-          <main className="content-frame"><CurrentView /></main>
+          <AppHeader onMenu={() => setNavOpen(true)} onCommand={() => setCommandOpen(true)} />
+          <main className="content-frame" id="studio-content"><CurrentView /></main>
         </div>
-        {notice && <div className="toast" role="status"><CheckCircle2 size={18} /><span>{notice}</span><button onClick={clearNotice} aria-label="Dismiss"><X size={15} /></button></div>}
+        {commandOpen && <StudioSwitcher open onClose={() => setCommandOpen(false)} />}
+        {notice && <div className="toast" role="status" aria-live="polite"><CheckCircle2 size={18} /><span>{notice}</span><button onClick={clearNotice} aria-label="Dismiss"><X size={15} /></button></div>}
       </div>
     </>
   );
