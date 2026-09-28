@@ -36,7 +36,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { campaignCases, campaignDisciplines, synthesizePatternIdeas } from "@/lib/campaign-intelligence";
+import { campaignCases, campaignDisciplines, getEvidenceProfile, researchArchives, synthesizePatternIdeas } from "@/lib/campaign-intelligence";
 import { checkClaim, exportCampaign, UnsupportedClaimError, validateCampaign } from "@/lib/revision-engine";
 import type { Asset, Campaign, ValidationResult } from "@/lib/models";
 import { type StudioView, useCampaignStore } from "@/store/campaign-store";
@@ -57,7 +57,7 @@ const navItems: { id: StudioView; label: string; icon: typeof Home; short: strin
 const viewTitles: Record<StudioView, { eyebrow: string; title: string; note: string }> = {
   home: { eyebrow: "Campaign 01 · Active", title: "Stride Modular Backpack Launch", note: "One campaign source · Three connected outputs" },
   builder: { eyebrow: "New campaign · Guided build", title: "Campaign builder", note: "Brand, brief, strategy and delivery" },
-  intelligence: { eyebrow: "Pattern library · R1", title: "Campaign intelligence", note: "Five decades of creative mechanics" },
+  intelligence: { eyebrow: "Pattern library · R2", title: "Campaign intelligence", note: "Five research lenses · Evidence kept separate" },
   team: { eyebrow: "Studio room · 4 collaborators", title: "Team workspace", note: "Roles, feedback and approval flow" },
   source: { eyebrow: "01 · Campaign source", title: "Brief & source of truth", note: "Approved facts control factual copy" },
   concepts: { eyebrow: "02 · Creative direction", title: "Choose one campaign idea", note: "Strategy before production" },
@@ -294,10 +294,15 @@ function CampaignHome() {
 function CampaignIntelligence() {
   const [discipline, setDiscipline] = useState<(typeof campaignDisciplines)[number]>("All");
   const [activeId, setActiveId] = useState("mean-joe");
+  const [activeArchiveId, setActiveArchiveId] = useState(researchArchives[0].id);
   const [challenge, setChallenge] = useState("Launch a modular backpack for people whose day changes without warning");
   const [ideas, setIdeas] = useState(() => synthesizePatternIdeas(challenge));
   const active = campaignCases.find((item) => item.id === activeId) ?? campaignCases[0];
+  const activeArchive = researchArchives.find((item) => item.id === activeArchiveId) ?? researchArchives[0];
+  const evidenceProfile = getEvidenceProfile(active);
   const filtered = discipline === "All" ? campaignCases : campaignCases.filter((item) => item.discipline === discipline);
+  const firstYear = Math.min(...campaignCases.map((item) => item.year));
+  const lastYear = Math.max(...campaignCases.map((item) => item.year));
 
   return (
     <div className="view intelligence-view page-enter">
@@ -307,24 +312,63 @@ function CampaignIntelligence() {
           <h1>The model remembers<br /><em>why people cared.</em></h1>
         </div>
         <div className="intelligence-intro">
-          <p>RECAST turns landmark campaigns into reusable mechanics—not copy to imitate. Every pattern stays linked to the source, the cultural tension and the evidence that made it work.</p>
+          <p>RECAST turns landmark campaigns into reusable mechanics—not copy to imitate. Discovery, award recognition and measured effectiveness remain separate evidence layers, each linked to its source.</p>
           <div className="corpus-stats">
-            <div><strong>47</strong><span>years studied</span></div>
+            <div><strong>{lastYear - firstYear + 1}</strong><span>year research span</span></div>
             <div><strong>{campaignCases.length}</strong><span>campaign cases</span></div>
-            <div><strong>8</strong><span>creative mechanics</span></div>
+            <div><strong>{researchArchives.length}</strong><span>archive lenses</span></div>
           </div>
         </div>
       </section>
 
       <section className="method-strip">
-        <div><BookOpen size={18} /><strong>Pattern Library · R1</strong></div>
-        <p>This working prototype uses a cited retrieval layer to steer ideation. It does not claim that these campaigns trained a foundation model.</p>
-        <span>Sources attached</span>
+        <div><BookOpen size={18} /><strong>Pattern Library · R2</strong></div>
+        <p>This prototype uses a curated, cited retrieval set—not foundation-model training. It stores the creative move, award record and outcome claim as different facts.</p>
+        <span>Evidence boundaries on</span>
+      </section>
+
+      <section className="research-observatory">
+        <div className="research-observatory-heading">
+          <div><span className="micro-label">RESEARCH SOURCE MAP</span><h2>Five archives.<br /><em>Five different jobs.</em></h2></div>
+          <p>A useful campaign memory needs breadth, authority and outcomes. RECAST now knows what each archive can support—and what it cannot.</p>
+        </div>
+        <div className="research-source-layout">
+          <div className="research-source-list" aria-label="Campaign research archives">
+            {researchArchives.map((archive, index) => (
+              <button
+                key={archive.id}
+                className={cx(activeArchive.id === archive.id && "research-source-active")}
+                onClick={() => setActiveArchiveId(archive.id)}
+                aria-pressed={activeArchive.id === archive.id}
+                data-testid={`research-source-${archive.id}`}
+              >
+                <span>0{index + 1}</span><div><strong>{archive.name}</strong><small>{archive.role}</small></div><ChevronRight size={15} />
+              </button>
+            ))}
+          </div>
+          <article className="research-source-detail" aria-live="polite">
+            <div className="research-source-top"><span>{activeArchive.role}</span><strong>{activeArchive.coverage}</strong></div>
+            <h3>{activeArchive.name}</h3>
+            <p>{activeArchive.strength}</p>
+            <div className="research-lenses">{activeArchive.lenses.map((lens) => <span key={lens}>{lens}</span>)}</div>
+            <dl>
+              <div><dt>Safe to infer</dt><dd>{activeArchive.proves}</dd></div>
+              <div><dt>Do not infer</dt><dd>{activeArchive.caution}</dd></div>
+            </dl>
+            <a href={activeArchive.url} target="_blank" rel="noreferrer">Open the source archive <ExternalLink size={13} /></a>
+          </article>
+        </div>
+        <div className="evidence-protocol" aria-label="RECAST research evidence protocol">
+          <article><span>01</span><div><strong>Discover</strong><p>Find the work across eras, markets and media.</p></div></article>
+          <article><span>02</span><div><strong>Verify</strong><p>Confirm year, award, category and credited creators.</p></div></article>
+          <article><span>03</span><div><strong>Prove</strong><p>Attach the original metric, method and outcome owner.</p></div></article>
+          <article><span>04</span><div><strong>Transfer</strong><p>Extract the mechanic—never the protected execution.</p></div></article>
+        </div>
       </section>
 
       <section className="archive-section">
         <div className="archive-heading">
-          <div><span className="micro-label">THE CAMPAIGN ARCHIVE</span><h2>Five decades. Eight ways into culture.</h2></div>
+          <div><span className="micro-label">THE CURATED CAMPAIGN SET</span><h2>Forty-seven years. Eight ways into culture.</h2></div>
           <div className="archive-search"><Search size={15} /><span>Filter the underlying mechanic</span></div>
         </div>
         <div className="discipline-filter" aria-label="Filter campaigns by creative mechanic">
@@ -336,7 +380,7 @@ function CampaignIntelligence() {
           {filtered.map((campaign, index) => (
             <article className={cx("archive-card", active.id === campaign.id && "archive-card-active")} key={campaign.id} style={{ "--case-accent": campaign.accent } as React.CSSProperties}>
               <button className="archive-card-main" onClick={() => setActiveId(campaign.id)} aria-label={`Open ${campaign.name} case study`}>
-                <div className="archive-poster"><span>{campaign.year}</span><strong>{campaign.name}</strong><small>{campaign.brand}</small><i>{String(index + 1).padStart(2, "0")}</i></div>
+                <div className="archive-poster"><span>{campaign.year}</span><strong>{campaign.name}</strong><small>{campaign.brand}</small><i>{String(index + 1).padStart(2, "0")}</i>{campaign.recognitions?.length ? <b>{campaign.recognitions.length}× award verified</b> : null}</div>
                 <div className="archive-copy"><span>{campaign.discipline}</span><h3>{campaign.hook}</h3><p>{campaign.mechanic}</p></div>
               </button>
               <a href={campaign.sourceUrl} target="_blank" rel="noreferrer">{campaign.sourceLabel}<ExternalLink size={12} /></a>
@@ -349,11 +393,20 @@ function CampaignIntelligence() {
         <div className="case-index"><span>CASE FILE</span><strong>{active.year}</strong><small>{active.brand}</small></div>
         <div className="case-main">
           <div className="case-title"><span>{active.discipline} / {active.mechanic}</span><h2>{active.name}</h2><p>{active.hook}</p></div>
+          <div className="case-evidence-ribbon">
+            <div><ShieldCheck size={16} /><span>Evidence profile</span></div>
+            <dl>
+              <div><dt>Provenance</dt><dd>{evidenceProfile.sourceClass}</dd></div>
+              <div><dt>Results</dt><dd>{evidenceProfile.resultStatus}</dd></div>
+              <div><dt>Awards</dt><dd>{evidenceProfile.awardStatus}</dd></div>
+            </dl>
+          </div>
           <div className="case-columns">
             <article><span>WHAT IT DID</span><p>{active.originalMove}</p></article>
             <article><span>WHY IT TRAVELLED</span><p>{active.whyItWorked}</p><small>{active.evidence}</small></article>
             <article className="case-recast"><span>IF RECAST HAD BEEN THERE</span><p>{active.recastLift}</p></article>
           </div>
+          {active.recognitions?.length ? <div className="recognition-links">{active.recognitions.map((recognition) => <a key={`${recognition.archive}-${recognition.label}`} href={recognition.url} target="_blank" rel="noreferrer"><span>{recognition.archive}</span>{recognition.label}<ExternalLink size={11} /></a>)}</div> : null}
           <div className="case-logic" aria-label="RECAST campaign pattern flow">
             <span>cultural signal</span><ArrowRight size={14} /><span>creative tension</span><ArrowRight size={14} /><span>channel roles</span><ArrowRight size={14} /><span>evidence lock</span>
           </div>
@@ -384,8 +437,8 @@ function CampaignIntelligence() {
       </section>
 
       <footer className="research-footer">
-        <span>RECAST / CAMPAIGN INTELLIGENCE R1</span>
-        <p>Research is a launchpad for original thinking—not a license to reproduce protected creative.</p>
+        <span>RECAST / CAMPAIGN INTELLIGENCE R2</span>
+        <p>Research is a launchpad for original thinking—not a license to reproduce protected creative or misstate submitted results.</p>
         <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Back to top ↑</button>
       </footer>
     </div>

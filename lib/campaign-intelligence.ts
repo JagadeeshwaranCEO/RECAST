@@ -24,7 +24,107 @@ export type CampaignCase = {
   sourceLabel: string;
   accent: string;
   deepDive?: boolean;
+  recognitions?: Array<{
+    archive: string;
+    label: string;
+    url: string;
+  }>;
 };
+
+export type ResearchArchive = {
+  id: "love-the-work-more" | "one-show" | "drum" | "ads-of-the-world" | "dandad";
+  name: string;
+  role: "Discovery mirror" | "Award authority" | "Effectiveness authority" | "Global discovery";
+  coverage: string;
+  strength: string;
+  proves: string;
+  caution: string;
+  lenses: string[];
+  url: string;
+};
+
+export const researchArchives: ResearchArchive[] = [
+  {
+    id: "love-the-work-more",
+    name: "Love The Work More",
+    role: "Discovery mirror",
+    coverage: "Cannes Lions work · 1954 onward",
+    strength: "Fast, free historical discovery across generations of Lions-winning work.",
+    proves: "A campaign is worth investigating and which Lion level the compilation attributes to it.",
+    caution: "It is an independent compilation, not the Cannes Lions authority. Verify award facts against The Work or another official record before publishing them.",
+    lenses: ["Era", "Lion level", "Creative work"],
+    url: "https://lovetheworkmore.com/about/",
+  },
+  {
+    id: "one-show",
+    name: "The One Show",
+    role: "Award authority",
+    coverage: "50+ years · advertising, design and emerging disciplines",
+    strength: "Precise award, year, discipline, category, client and credited-company metadata.",
+    proves: "Verified Pencil or Merit recognition and the craft discipline in which the work was judged.",
+    caution: "A creative award is evidence of judged excellence, not automatic evidence of sales, behavior change or long-term effectiveness.",
+    lenses: ["Award", "Discipline", "Credits"],
+    url: "https://www.oneclub.org/awards/theoneshow/-search/",
+  },
+  {
+    id: "drum",
+    name: "The Drum Awards",
+    role: "Effectiveness authority",
+    coverage: "Marketing, media, sector, channel and outcome-led programs",
+    strength: "Strategy, execution and results are evaluated together, making the archive useful for outcome reasoning.",
+    proves: "A jury evaluated the submitted work for both excellent practice and effective results within a named program.",
+    caution: "Treat campaign metrics as submitted case evidence until the original measurement method or an independent result source is attached.",
+    lenses: ["Strategy", "Results", "Effectiveness"],
+    url: "https://awards.thedrum.com/marketing-awards-entry-kit/categories",
+  },
+  {
+    id: "ads-of-the-world",
+    name: "Ads of the World",
+    role: "Global discovery",
+    coverage: "Global work by market, medium, brand, event and editorial collection",
+    strength: "Broad creative reconnaissance beyond the usual award circuit, including regional and format-specific collections.",
+    proves: "The work and its published credits can be discovered in a global advertising context.",
+    caution: "Archive presence or collection inclusion is not itself an award, an endorsement or proof of effectiveness.",
+    lenses: ["Market", "Medium", "Category"],
+    url: "https://www.adsoftheworld.com/collections",
+  },
+  {
+    id: "dandad",
+    name: "D&AD",
+    role: "Award authority",
+    coverage: "1962 onward · advertising, design, craft, culture and impact",
+    strength: "Deep craft taxonomy, Pencil level, country, year, credits and—in selected cases—jury reasoning.",
+    proves: "A named level of peer-judged creative excellence in a specific craft or impact category.",
+    caution: "Pencil level and craft acclaim must remain separate from business effectiveness unless outcome evidence is also sourced.",
+    lenses: ["Craft", "Pencil", "Country"],
+    url: "https://www.dandad.org/work/d-ad-awards-archive",
+  },
+];
+
+export type EvidenceProfile = {
+  sourceClass: "Owner record" | "Agency record" | "Independent reporting";
+  resultStatus: "Measured outcome cited" | "Mechanic evidence only";
+  awardStatus: string;
+};
+
+const measuredOutcomeCases = new Set(["old-spice", "share-a-coke", "like-a-girl", "ice-bucket", "wrapped"]);
+
+export function getEvidenceProfile(campaign: CampaignCase): EvidenceProfile {
+  const host = new URL(campaign.sourceUrl).hostname;
+  const sourceClass = host === "www.wk.com"
+    ? "Agency record"
+    : host === "time.com"
+      ? "Independent reporting"
+      : "Owner record";
+
+  return {
+    sourceClass,
+    resultStatus: measuredOutcomeCases.has(campaign.id) ? "Measured outcome cited" : "Mechanic evidence only",
+    awardStatus: campaign.recognitions?.length
+      ? `${campaign.recognitions.length} official award ${campaign.recognitions.length === 1 ? "record" : "records"}`
+      : "Award status not asserted",
+  };
+}
 
 export const campaignCases: CampaignCase[] = [
   {
@@ -175,6 +275,13 @@ export const campaignCases: CampaignCase[] = [
     sourceUrl: "https://origprod-cus-us.pg.com/pg-history/",
     sourceLabel: "P&G history",
     accent: "#2c75c9",
+    recognitions: [
+      {
+        archive: "D&AD",
+        label: "Black Pencil · 2015",
+        url: "https://www.dandad.org/work/d-ad-awards-archive/likeagirl",
+      },
+    ],
   },
   {
     id: "ice-bucket",
@@ -225,6 +332,18 @@ export const campaignCases: CampaignCase[] = [
     sourceLabel: "TIME campaign report",
     accent: "#79a85a",
     deepDive: true,
+    recognitions: [
+      {
+        archive: "D&AD",
+        label: "Black Pencil · 2020",
+        url: "https://www.dandad.org/work/d-ad-awards-archive/moldy-whopper",
+      },
+      {
+        archive: "The One Show",
+        label: "Best of Show · 2020",
+        url: "https://www.oneclub.org/awards/theoneshow/-search/",
+      },
+    ],
   },
   {
     id: "why-do-it",

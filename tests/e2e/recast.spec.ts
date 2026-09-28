@@ -74,7 +74,14 @@ test("campaign memory and intelligence library stay responsive", async ({ page }
   await expect(page.getByRole("heading", { name: "Fifty years of attention." })).toBeVisible();
   await page.getByTestId("nav-intelligence").click();
   await expect(page.getByRole("heading", { name: "The model remembers why people cared." })).toBeVisible();
-  await expect(page.getByText("Pattern Library · R1", { exact: true })).toBeVisible();
+  await expect(page.getByText("Pattern Library · R2", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Five archives. Five different jobs." })).toBeVisible();
+  await page.getByTestId("research-source-drum").click();
+  await expect(page.getByText("Effectiveness authority", { exact: true }).last()).toBeVisible();
+  await expect(page.getByText("Treat campaign metrics as submitted case evidence until the original measurement method or an independent result source is attached.")).toBeVisible();
+  await page.getByTestId("research-source-dandad").click();
+  await expect(page.getByRole("heading", { name: "D&AD", exact: true })).toBeVisible();
+  await expect(page.getByText("Pencil", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Mean Joe Greene case study" })).toBeVisible();
   await page.getByRole("button", { name: "Personalization", exact: true }).click();
   await expect(page.getByRole("button", { name: "Open Wrapped case study" })).toBeVisible();
@@ -85,6 +92,18 @@ test("campaign memory and intelligence library stay responsive", async ({ page }
     documentWidth: document.documentElement.scrollWidth,
   }));
   expect(layout.documentWidth).toBe(layout.viewportWidth);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openStudio(page);
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  await page.getByTestId("nav-intelligence").click();
+  await page.getByTestId("research-source-ads-of-the-world").click();
+  await expect(page.getByRole("heading", { name: "Ads of the World", exact: true })).toBeVisible();
+  const mobileLayout = await page.evaluate(() => ({
+    viewportWidth: window.innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }));
+  expect(mobileLayout.documentWidth).toBe(mobileLayout.viewportWidth);
 });
 
 test("brand team can create a campaign and move work through the studio", async ({ page }) => {
