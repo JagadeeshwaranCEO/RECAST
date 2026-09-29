@@ -4,6 +4,20 @@
 
 RECAST separates **campaign meaning** from **rendered creative**. Facts and claims are versioned source records. Asset blocks depend on them through explicit edges. A revision is a graph operation with an audit trail, not a global find-and-replace.
 
+The production workspace adds a second contract: **AI may propose, but only governed brand inputs and approved evidence may ship.** Brand tokens, assets, agent findings, editable creative, approvals, hosted output and post-launch signals form one traceable loop.
+
+```mermaid
+flowchart LR
+  Brief[Brand brief] --> BrandOS[Brand OS]
+  BrandOS --> Council[Six-agent council]
+  Assets[Owned asset vault] --> Studio[Poster studio]
+  Council --> Studio
+  Studio --> Review[Human review]
+  Review --> Launch[Campaign page + channel queue]
+  Launch --> Radar[Signal radar]
+  Radar -->|approved insight| Brief
+```
+
 ```mermaid
 flowchart LR
   F["Fact · fact.price.v1"] -->|"displays price"| R["Reel · End card"]
@@ -82,12 +96,16 @@ The deterministic guard compares requested wording with the controlled claim reg
 
 ## Local-first reliability
 
-Zustand holds the in-browser demo session. Builder work is scoped to `sessionStorage`, and campaign approval state remains in memory. No network service is required for generation, revisions, checks, approvals, or exports. A future provider may suggest structured concept or copy data, but those responses must pass the same Zod schemas before entering the graph.
+Zustand holds the in-browser demo session. Builder and production work are scoped to `sessionStorage`, and campaign approval state remains in memory. No network service is required for revisions, checks, approvals, poster export, local campaign hosting or the governed agent fallback. When a model key is configured, `/api/agents` calls the Responses API with a strict response schema; invalid, timed-out or unavailable responses fall back to the same local council contract.
 
 ## Runtime trust boundaries
 
 - **Public edge:** the Cloudflare Worker serves the Vinext app. RECAST removes the unused image-transform route, applies CSP and anti-framing headers, and uses different cache lifetimes for hashed bundles and unversioned media.
 - **Browser workspace:** user-entered briefs and comments are local to the active browser tab. They are presentation state, not authoritative approvals or server records.
+- **Uploaded assets:** PNG, JPEG and WebP files are MIME- and size-gated before browser-local ingestion. A commercial deployment must replace data URLs with signed object-storage uploads, malware scanning, rights metadata and tenant isolation.
+- **Agent adapter:** `/api/agents` validates input, enforces a small in-process demo rate limit, applies a timeout, requests structured JSON and validates output before returning it. Distributed rate limiting and tenant budgets remain production gates.
+- **Launch pages:** `/c/[slug]` renders a working browser-local campaign payload. Public multi-user hosting requires durable server persistence and globally unique tenant-aware slugs.
+- **Signal radar:** bundled signals demonstrate interaction and the learning loop; the interface explicitly labels them as demo data until an authorised listening provider is connected.
 - **Campaign engine:** only schema-valid campaign structures enter the deterministic revision engine. Base-version checks stop stale jobs, and explicit dependency edges define exactly what can change.
 - **External research:** source links are static citations opened by the user. The server does not crawl or proxy them.
 - **Future identity:** `chatgpt-auth.ts` is an optional trusted-proxy helper and is not an active authorization boundary in the public demo.

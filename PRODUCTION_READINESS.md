@@ -7,17 +7,17 @@ This document separates the **verified hackathon product** from the controls req
 | System design | One typed campaign aggregate, explicit fact-to-block dependency edges, immutable revisions | Ready for demo | Split durable campaign, asset, revision, and audit services only when scale requires it |
 | Architecture | Next/Vinext UI on a Cloudflare Worker; deterministic engine in `lib/` | Ready for demo | Add a service boundary for generation jobs and tenant-scoped persistence |
 | Frontend | Responsive studio, keyboard navigation, reduced-motion support, loading/error/recovery states | Verified by E2E and source review | Run assistive-technology and real-device testing before commercial launch |
-| API/backend | Health endpoint only; no public mutation or generation API | Intentionally minimal | Add Zod-validated request contracts, idempotency keys, job state, and safe provider adapters |
-| Database/storage | Campaign source is in memory; builder workspace is scoped to the current browser tab | Safe for public demo | Use tenant-scoped Postgres/D1 records, migrations, backups, retention, and row-level authorization |
+| API/backend | Health endpoint plus Zod-validated, timed, rate-limited agent council route with local fallback | Strong demo boundary | Add distributed rate limits, idempotency keys, durable job state, tenant budgets, and provider telemetry |
+| Database/storage | Campaign source is in memory; builder, uploads, poster and launch workspace are scoped to the current browser session | Safe for public demo | Use tenant-scoped Postgres/D1 plus object storage, migrations, backups, retention, malware scanning and row-level authorization |
 | Authentication/permissions | Optional ChatGPT header helper exists but is not an active product boundary | Public demo | Enforce trusted-proxy identity, organization membership, campaign roles, and per-action authorization |
 | Hosting/cloud | Cloudflare Worker and static assets; fixed canonical metadata origin | Ready | Add staged environments, rollbacks, regional/data-residency decisions, and budget controls |
 | CI/CD/version control | GitHub Actions runs lint, typecheck, unit tests, build, and Playwright | Configured | Protect `main`, require checks/reviews, sign releases, and automate deploy previews |
 | Security | CSP, anti-framing, `nosniff`, referrer/permissions policy; unused image-transform endpoint removed | Hardened for demo | Add SAST/dependency alerts, periodic threat-model review, incident process, and penetration testing |
-| Rate limiting | No public mutation or AI endpoint exists | Not applicable today | Add per-user, per-tenant, and cost-based limits before any generation/upload endpoint ships |
+| Rate limiting | Agent endpoint has an in-process 8-request/minute demo guard | Demo protection only | Replace with distributed per-user, per-tenant, concurrency and cost limits before public generation ships |
 | Caching/CDN | Hashed JS/CSS are immutable; unversioned media uses short cache + stale revalidation | Configured | Add cache analytics, purge strategy, canonical API caching rules, and regional testing |
 | Errors/logs | Route-level error boundary and structured browser console diagnostic; health endpoint | Baseline | Add privacy-filtered centralized errors, request IDs, retention rules, and operator runbooks |
 | Monitoring/alerts | `/api/health` reports service mode and deterministic-engine readiness | Baseline | Add synthetic judge-flow monitoring, SLOs, quota/cost alerts, and on-call ownership |
-| Testing | Unit coverage for revision semantics and campaign research; Playwright covers the judge flow and responsive layouts | Strong demo gate | Add API contract, persistence, authorization, load, visual-regression, and accessibility automation |
+| Testing | Unit coverage for revisions, research and agent governance; Playwright covers responsive, authoring and end-to-end production flows | Strong demo gate | Add provider contract, persistence, authorization, load, visual-regression, and accessibility automation |
 | Scaling | Stateless page/engine work scales at the edge; static media is CDN-friendly | Ready for demo traffic | Move generation to queues, make writes idempotent, and add backpressure before model workloads |
 
 ## Non-negotiable production gates

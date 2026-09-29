@@ -11,8 +11,8 @@
 <h1 align="center">RECAST</h1>
 
 <p align="center">
-  <strong>A meaning-aware campaign studio that changes the fact—not every file.</strong><br />
-  One approved source. Connected outputs. Selective revision. Evidence before export.
+  <strong>A governed AI campaign operating system—from brand truth to a live launch.</strong><br />
+  Brand OS. Agent council. Asset vault. Poster production. Selective revision. Hosting. Signal learning.
 </p>
 
 <p align="center">
@@ -74,6 +74,8 @@ RECAST studies enduring campaign mechanics—emotional reversal, absence, ritual
 
 The memory library is a researched strategy layer. It is intentionally described as retrieval and pattern intelligence—not as model training. Sources and creative rights remain attributable.
 
+The product expansion also studies the workflow standards behind sixteen design, AI, brand-management, social and listening products. The source-by-source mapping and rights boundary are documented in [docs/PRODUCT_RESEARCH.md](./docs/PRODUCT_RESEARCH.md).
+
 ## Evidence before export
 
 <p align="center">
@@ -84,6 +86,13 @@ Machine checks verify price consistency, approved claims, locked-asset integrity
 
 ## What works today
 
+- Multi-brand Campaign Builder for brand voice, audience, objective, proof, market, channels and visual tokens.
+- Brand OS with palette presets, typography behavior, locked production rules and live poster-token sync.
+- Six-agent campaign council for research, strategy, copy, art direction, claims and activation; optional model-assisted mode with a deterministic fallback.
+- Rights-aware Asset Vault for owned product imagery, campaign posters, logos and references.
+- Editable Poster Studio with 1:1, 4:5, 9:16 and 1.91:1 layouts plus real PNG export at production dimensions.
+- Launch Control with a working campaign microsite, launch timing and channel package queue.
+- Signal Radar demo for mentions, sentiment, claim risk and an insight-to-brief learning loop; external providers are clearly marked as unconnected.
 - Complete seeded Stride campaign spanning Instagram Reel, Instagram Carousel and LinkedIn.
 - Versioned source of truth for prices, claims, evidence, prohibited wording and brand rules.
 - Explicit dependency-graph revision engine—no broad string replacement.
@@ -99,21 +108,24 @@ Machine checks verify price consistency, approved claims, locked-asset integrity
 
 ```mermaid
 flowchart LR
-    B[Brand brief] --> S[Versioned source of truth]
-    M[Campaign memory] --> C[Concept system]
+    B[Brand brief] --> OS[Brand OS]
+    OS --> S[Versioned source of truth]
+    M[Campaign memory] --> A[Six-agent council]
+    S --> A
+    A --> C[Concept system]
     S --> C
-    C --> O1[Reel]
-    C --> O2[Carousel]
-    C --> O3[LinkedIn]
+    C --> P[Poster studio]
+    V[Owned asset vault] --> P
+    P --> O[Channel-native outputs]
     S --> G[Dependency graph]
-    G --> O1
-    G --> O2
-    G --> O3
+    G --> O
     R[Source revision] --> G
     G --> D[Block-level diff]
     D --> Q[Evidence checks]
     Q --> H[Human approval]
-    H --> E[Export]
+    H --> L[Hosted launch + export]
+    L --> SR[Signal radar]
+    SR --> B
 ```
 
 The deterministic control plane is the product guarantee: facts, claims and approvals behave predictably even when a future model-assisted suggestion layer is unavailable. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the data contracts and trust boundaries.
@@ -175,6 +187,7 @@ npx playwright install chromium
 | Interface | React 19, Next.js 16, TypeScript 5.9 |
 | State | Zustand with session-scoped persistence |
 | Validation | Zod schemas at every campaign boundary |
+| AI | Optional Responses API adapter with structured-output validation and deterministic fallback |
 | Runtime | Vinext, Vite and Cloudflare Workers tooling |
 | Testing | Vitest and Playwright |
 | Quality | ESLint, TypeScript, production build and GitHub Actions |
@@ -184,6 +197,9 @@ npx playwright install chromium
 ```text
 app/
   CampaignStudio.tsx       Product experience and interaction shell
+  studio/                   Brand OS, agents, assets, poster, launch and radar
+  api/agents/               Rate-limited, schema-validated agent adapter
+  c/[slug]/                 Hosted campaign microsite
   api/health/              Operational health endpoint
   globals.css              Editorial design system and responsive layout
 lib/
@@ -191,23 +207,28 @@ lib/
   seed.ts                  Validated Stride demo campaign
   revision-engine.ts       Dependency traversal and selective updates
   campaign-intelligence.ts Strategy-pattern research layer
+  agent-orchestrator.ts     Six-agent contracts and deterministic council
 store/
   workspace-store.ts       Local campaign workspace state
+  production-store.ts      Assets, poster and launch workspace state
 tests/
   revision-engine.test.ts  Semantic reliability tests
+  agent-orchestrator.test.ts Agent governance tests
   e2e/recast.spec.ts       Full judge-path browser test
 docs/images/               Repository presentation assets
 ```
 
 ## Honest boundaries
 
-This hackathon build is deterministic and requires no API key. It does not pretend that simulated generation is a production AI service.
+This hackathon build remains fully usable without an API key. When `OPENAI_API_KEY` is configured, the agent council uses a schema-validated provider response; otherwise it uses the deterministic governed planner.
 
 - Persistent accounts, team tenancy and a production database are future deployment gates.
 - Reel export is a labelled scene-plan preview; a video renderer is not configured.
 - Commercial deployments require rights-cleared client photography.
+- Uploaded assets and campaign microsites are browser-local in this prototype; production requires object storage, malware scanning, rights metadata and a durable database.
+- Social publishing and monitoring connectors are presented as explicit connection points—not as working third-party integrations—until OAuth or API credentials are configured.
 - Tone and aesthetic quality remain human-review decisions by design.
-- A future model adapter may propose structured copy, but cannot bypass campaign validation or approval.
+- Model output can propose structured strategy and copy, but cannot bypass source validation or human approval.
 
 Read [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md) for the security review and the exact path from hackathon system to multi-tenant SaaS.
 

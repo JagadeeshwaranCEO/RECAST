@@ -7,6 +7,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   BookOpen,
+  Bot,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -17,6 +18,7 @@ import {
   Download,
   ExternalLink,
   FileCheck2,
+  FileImage,
   GitBranch,
   Home,
   Layers3,
@@ -29,10 +31,13 @@ import {
   Palette,
   PenLine,
   Plus,
+  Radar,
   RotateCcw,
+  Rocket,
   Search,
   ShieldCheck,
   Sparkles,
+  SwatchBook,
   Target,
   UserPlus,
   Users,
@@ -41,6 +46,7 @@ import {
 import { campaignCases, campaignDisciplines, getEvidenceProfile, researchArchives, synthesizePatternIdeas } from "@/lib/campaign-intelligence";
 import { checkClaim, exportCampaign, UnsupportedClaimError, validateCampaign } from "@/lib/revision-engine";
 import type { Asset, Campaign, ValidationResult } from "@/lib/models";
+import { AgentRoom, AssetVault, BrandControlCenter, LaunchHub, PosterStudio, SignalRadar } from "@/app/studio/ExpansionStudio";
 import { type StudioView, useCampaignStore } from "@/store/campaign-store";
 import {
   LEGACY_WORKSPACE_STORAGE_KEY,
@@ -56,23 +62,35 @@ const navItems: { id: StudioView; label: string; icon: typeof Home; short: strin
   { id: "builder", label: "Create a campaign", icon: Plus, short: "Create" },
   { id: "intelligence", label: "Campaign intelligence", icon: BookOpen, short: "Memory" },
   { id: "source", label: "Source of truth", icon: FileCheck2, short: "Source" },
+  { id: "brandos", label: "Brand control center", icon: SwatchBook, short: "Brand OS" },
+  { id: "agents", label: "AI agent council", icon: Bot, short: "Agents" },
+  { id: "assets", label: "Brand asset vault", icon: FileImage, short: "Assets" },
+  { id: "poster", label: "Campaign poster studio", icon: Palette, short: "Poster" },
   { id: "concepts", label: "Creative concepts", icon: Sparkles, short: "Concept" },
   { id: "canvas", label: "Campaign canvas", icon: LayoutTemplate, short: "Canvas" },
   { id: "team", label: "Team studio", icon: Users, short: "Team" },
   { id: "revision", label: "Revision studio", icon: GitBranch, short: "Revise" },
   { id: "review", label: "Review & publish", icon: ShieldCheck, short: "Review" },
+  { id: "publish", label: "Launch campaign", icon: Rocket, short: "Launch" },
+  { id: "radar", label: "Brand signal radar", icon: Radar, short: "Radar" },
 ];
 
 const viewTitles: Record<StudioView, { eyebrow: string; title: string; note: string }> = {
   home: { eyebrow: "Campaign 01 · Active", title: "Stride / The New Formal", note: "One campaign source · Three connected outputs" },
   builder: { eyebrow: "New campaign · Guided build", title: "Campaign builder", note: "Brand, brief, strategy and delivery" },
   intelligence: { eyebrow: "Pattern library · R2", title: "Campaign intelligence", note: "Five research lenses · Evidence kept separate" },
-  team: { eyebrow: "Studio room · 4 collaborators", title: "Team workspace", note: "Roles, feedback and approval flow" },
   source: { eyebrow: "01 · Campaign source", title: "Brief & source of truth", note: "Approved facts control factual copy" },
+  brandos: { eyebrow: "Brand OS · Governance", title: "Brand control center", note: "Tokens · Voice · Guardrails · Toolchain" },
+  agents: { eyebrow: "Agent council · 6 specialists", title: "AI campaign agents", note: "Research to activation · One governed brief" },
+  assets: { eyebrow: "Brand system · Asset vault", title: "Campaign assets", note: "Upload, classify and reuse brand material" },
+  poster: { eyebrow: "Production · Poster studio", title: "Campaign poster builder", note: "Editable formats · Production PNG export" },
   concepts: { eyebrow: "02 · Creative direction", title: "Choose one campaign idea", note: "Strategy before production" },
   canvas: { eyebrow: "03 · Connected output", title: "Campaign canvas", note: "Every claim has a source" },
+  team: { eyebrow: "Studio room · 4 collaborators", title: "Team workspace", note: "Roles, feedback and approval flow" },
   revision: { eyebrow: "04 · Selective revision", title: "Change meaning, not files", note: "Only dependent blocks move" },
   review: { eyebrow: "05 · Quality control", title: "Review & publish readiness", note: "Evidence before export" },
+  publish: { eyebrow: "Launch control · Activation", title: "Host & publish campaign", note: "Campaign page · Calendar · Channel packages" },
+  radar: { eyebrow: "Signal radar · Learning loop", title: "Monitor & adapt", note: "Mentions · Sentiment · Opportunity · Response" },
 };
 
 function cx(...values: Array<string | false | null | undefined>) {
@@ -141,7 +159,7 @@ function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
               aria-current={view === item.id ? "page" : undefined}
               data-testid={`nav-${item.id}`}
             >
-              <span className="nav-index">0{index + 1}</span>
+              <span className="nav-index">{String(index + 1).padStart(2, "0")}</span>
               <Icon size={19} strokeWidth={1.7} />
               <span>{item.short}</span>
             </button>
@@ -233,7 +251,7 @@ function StudioSwitcher({ open, onClose }: { open: boolean; onClose: () => void 
         <div className="command-results">
           {matches.map((item, index) => {
             const Icon = item.icon;
-            return <button key={item.id} className={cx(view === item.id && "command-current")} onClick={() => { setView(item.id); onClose(); }} data-testid={`command-${item.id}`}><span>0{index + 1}</span><Icon size={18} /><div><strong>{item.label}</strong><small>{viewTitles[item.id].note}</small></div><ChevronRight size={15} /></button>;
+            return <button key={item.id} className={cx(view === item.id && "command-current")} onClick={() => { setView(item.id); onClose(); }} data-testid={`command-${item.id}`}><span>{String(index + 1).padStart(2, "0")}</span><Icon size={18} /><div><strong>{item.label}</strong><small>{viewTitles[item.id].note}</small></div><ChevronRight size={15} /></button>;
           })}
           {!matches.length && <div className="command-empty">No studio destination matches “{query}”.</div>}
         </div>
@@ -1053,12 +1071,18 @@ function CurrentView() {
   const view = useCampaignStore((state) => state.view);
   if (view === "builder") return <CampaignBuilder />;
   if (view === "intelligence") return <CampaignIntelligence />;
-  if (view === "team") return <TeamStudio />;
   if (view === "source") return <SourceTruth />;
+  if (view === "brandos") return <BrandControlCenter />;
+  if (view === "agents") return <AgentRoom />;
+  if (view === "assets") return <AssetVault />;
+  if (view === "poster") return <PosterStudio />;
   if (view === "concepts") return <ConceptSelection />;
   if (view === "canvas") return <CampaignCanvas />;
+  if (view === "team") return <TeamStudio />;
   if (view === "revision") return <RevisionStudio />;
   if (view === "review") return <ReviewPublish />;
+  if (view === "publish") return <LaunchHub />;
+  if (view === "radar") return <SignalRadar />;
   return <CampaignHome />;
 }
 
@@ -1132,7 +1156,7 @@ export function CampaignStudio() {
   const [showIntro, setShowIntro] = useState(true);
   const [navOpen, setNavOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
-  const { notice, clearNotice, view } = useCampaignStore();
+  const { notice, clearNotice, view, setView } = useCampaignStore();
   const contentRef = useRef<HTMLElement>(null);
 
   const completeIntro = () => {
@@ -1146,6 +1170,8 @@ export function CampaignStudio() {
 
   useEffect(() => {
     window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
+    const requestedView = new URLSearchParams(window.location.search).get("view") as StudioView | null;
+    if (requestedView && navItems.some((item) => item.id === requestedView)) setView(requestedView);
     if (new URLSearchParams(window.location.search).has("replay")) return;
     let introSeen = false;
     try {
@@ -1156,7 +1182,7 @@ export function CampaignStudio() {
     if (!introSeen) return;
     const frame = window.requestAnimationFrame(() => setShowIntro(false));
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [setView]);
 
   useEffect(() => {
     if (!notice) return;

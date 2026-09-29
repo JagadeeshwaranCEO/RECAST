@@ -10,15 +10,23 @@ Say:
 
 Point to the Desk, Transit, and Weekend timeline, then the health strip: five current facts, three outputs, zero reviews.
 
-## 0:20–0:45 — Show the connected campaign
+## 0:20–0:45 — Show that any brand can enter
 
-Open **Canvas**. Briefly switch through Reel, Carousel, and LinkedIn.
+Open **Create**, then **Brand OS**.
 
 Say:
 
-> “These are not three resized copies. The Reel makes versatility visceral, the Carousel proves features, and LinkedIn tells the design story. Under every factual block is the exact source fact it depends on. Product photography and the logo are locked by integrity hash.”
+> “RECAST starts from a real brand brief: audience, promise, proof, market, voice and channels. Brand OS turns that into shared visual tokens and rules, so a creator can move quickly without diluting the brand.”
 
-## 0:45–1:40 — The memorable price revision
+## 0:45–1:20 — Agents to production
+
+Open **Agents**, run the council, then open **Poster**.
+
+Say:
+
+> “Six accountable agents work from the same governed source: research, strategy, copy, art direction, claims and activation. They return one campaign thesis and native channel jobs. Their output becomes editable work—not a chat transcript. Here I can change the layout, format, copy, colour and campaign image, then export a production-sized PNG.”
+
+## 1:20–2:05 — The memorable price revision
 
 Open **Revise**. Change the price from **₹2,499** to **₹2,299** and click **Apply to campaign**.
 
@@ -36,7 +44,7 @@ Point to the green integrity bar:
 
 > “And the locked photography and logo hashes are unchanged.”
 
-## 1:40–2:15 — Claim safety
+## 2:05–2:30 — Claim safety
 
 In **Claim guard**, keep the request: **“Make it completely waterproof.”** Click **Check against source**.
 
@@ -50,21 +58,17 @@ Say:
 
 > “One click returns us to approved language, mapped to the controlled claim ID.”
 
-## 2:15–2:45 — Evidence and human approval
+## 2:30–2:45 — Publish and learn
 
-Open **Review**.
+Open **Launch**, publish the campaign page, then open **Radar**.
 
 Say:
 
-> “RECAST checks what software can prove: current price, approved claim links, unchanged asset hashes, layout fit, and stale approvals. It does not invent an AI confidence score. Tone and aesthetics stay explicitly human.”
-
-Click **Approve 2 affected outputs**.
-
-Point out that the campaign changes to **approved to export**.
+> “Approval is a human boundary. Once approved, RECAST can host the campaign, prepare the channel queue and listen for the next useful signal. A claim-risk insight can be added back to the source and sent through the council again.”
 
 ## 2:45–3:00 — Export and close
 
-Click **Revision report** to download the Markdown audit trail.
+Return to **Review** and click **Revision report** to download the Markdown audit trail.
 
 Say:
 
@@ -73,4 +77,3 @@ Say:
 Close with:
 
 > “Change the campaign’s meaning. Not twenty individual files.”
-

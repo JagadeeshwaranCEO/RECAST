@@ -12,7 +12,7 @@ test("cinematic intro welcomes the user and yields to the studio", async ({ page
   await expect(page.getByTestId("site-intro")).toBeVisible();
   await expect(page.getByText("Scattered signals.")).toBeVisible();
   await page.getByTestId("skip-intro").click();
-  await expect(page.getByTestId("site-intro")).toHaveCount(0);
+  await expect(page.getByTestId("site-intro")).toBeHidden();
   await expect(page.getByRole("heading", { name: "Your day changes. Your style should keep up." })).toBeVisible();
 });
 
@@ -129,6 +129,49 @@ test("brand team can create a campaign and move work through the studio", async 
   await page.getByPlaceholder("Add a decision, question or feedback…").fill("Approved for the next production pass.");
   await page.getByRole("button", { name: "Post", exact: true }).click();
   await expect(page.getByText("Approved for the next production pass.")).toBeVisible();
+
+  const layout = await page.evaluate(() => ({ viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth }));
+  expect(layout.documentWidth).toBe(layout.viewportWidth);
+});
+
+test("production flow connects brand governance, agents, uploads, design, launch, and listening", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStudio(page);
+
+  await page.getByTestId("nav-brandos").click();
+  await expect(page.getByRole("heading", { name: "Make the brand usable. Then make it impossible to dilute." })).toBeVisible();
+  await page.getByRole("button", { name: /Digital atelier/ }).click();
+  await expect(page.getByText("Five systems, one campaign flow")).toBeVisible();
+
+  await page.getByTestId("nav-assets").click();
+  await page.getByTestId("asset-upload").setInputFiles({
+    name: "approved-product.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"),
+  });
+  await expect(page.getByText("approved-product.png", { exact: true })).toBeVisible();
+
+  await page.getByTestId("nav-agents").click();
+  await page.getByTestId("run-agent-council").click();
+  await expect(page.getByText("Campaign thesis", { exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Scout/ })).toBeVisible();
+
+  await page.getByTestId("nav-poster").click();
+  await expect(page.getByTestId("poster-preview")).toBeVisible();
+  await page.getByLabel("Headline").fill("ONE LOOK. EVERY TURN.");
+  await expect(page.getByTestId("poster-preview")).toContainText("ONE LOOK. EVERY TURN.");
+
+  await page.getByTestId("nav-publish").click();
+  await page.getByTestId("publish-campaign").click();
+  await expect(page.getByText(/Campaign published to/)).toBeVisible();
+  await expect(page.getByRole("link", { name: /Open published campaign/ })).toBeVisible();
+
+  await page.getByTestId("nav-radar").click();
+  await expect(page.getByRole("heading", { name: "Launch is not the finish. The campaign learns in public." })).toBeVisible();
+  await page.getByRole("button", { name: "risk", exact: true }).click();
+  await expect(page.getByText("Claim clarity", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /Add insight to agent brief/ }).click();
+  await expect(page.getByText(/Signal added to the campaign brief/)).toBeVisible();
 
   const layout = await page.evaluate(() => ({ viewportWidth: innerWidth, documentWidth: document.documentElement.scrollWidth }));
   expect(layout.documentWidth).toBe(layout.viewportWidth);

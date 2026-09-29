@@ -5,7 +5,7 @@ import { createSeedCampaign } from "@/lib/seed";
 import { reviseFact } from "@/lib/revision-engine";
 import type { Campaign } from "@/lib/models";
 
-export type StudioView = "home" | "builder" | "intelligence" | "team" | "source" | "concepts" | "canvas" | "revision" | "review";
+export type StudioView = "home" | "builder" | "intelligence" | "source" | "brandos" | "agents" | "assets" | "poster" | "concepts" | "canvas" | "team" | "revision" | "review" | "publish" | "radar";
 
 type CampaignState = {
   campaign: Campaign;
