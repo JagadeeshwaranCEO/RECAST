@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://recast-campaign-studio.kavitha1975-vlr.chatgpt.site/"><strong>Explore the live experience ↗</strong></a>
+  <a href="http://localhost:3001/"><strong>Explore the local experience ↗</strong></a>
   &nbsp;·&nbsp;
   <a href="./DEMO_SCRIPT.md">3-minute judge demo</a>
   &nbsp;·&nbsp;
@@ -126,10 +126,10 @@ The deterministic control plane is the product guarantee: facts, claims and appr
 git clone https://github.com/JagadeeshwaranCEO/RECAST.git
 cd RECAST
 npm install
-npm run dev
+npm run dev -- --port 3001
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3001](http://localhost:3001).
 
 ## The three-minute judge path
 
