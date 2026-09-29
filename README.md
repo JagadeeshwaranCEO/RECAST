@@ -2,6 +2,10 @@
   <img src="./docs/images/recast-hero.png" alt="RECAST — a meaning-aware AI campaign studio" width="100%" />
 </p>
 
+<p align="center">
+  <img src="./docs/images/recast-mark.png" alt="RECAST monogram" width="108" />
+</p>
+
 <p align="center"><strong>AI BUILD CHALLENGE 2026 · TRACK 02 · TEAM PARADOX</strong></p>
 
 <h1 align="center">RECAST</h1>

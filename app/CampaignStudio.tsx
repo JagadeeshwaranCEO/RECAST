@@ -127,7 +127,7 @@ function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
     <aside className={cx("sidebar", open && "sidebar-open")} aria-label="Studio navigation">
       <button className="sidebar-close" onClick={onClose} aria-label="Close navigation"><X size={20} /></button>
       <button className="brand-mark" onClick={() => setView("home")} aria-label="RECAST home">
-        <span>R</span><i />
+        <img src="/recast-logo.png" alt="" aria-hidden="true" />
       </button>
       <nav className="sidebar-nav">
         {navItems.map((item, index) => {
@@ -1114,7 +1114,7 @@ function CinematicIntro({ onComplete }: { onComplete: () => void }) {
       </div>
 
       <div className="intro-core">
-        <div className="intro-monogram" aria-hidden="true"><span>R</span><i /></div>
+        <div className="intro-monogram" aria-hidden="true"><img src="/recast-logo.png" alt="" /></div>
         <p className="intro-overline">MEANING-AWARE CAMPAIGN INTELLIGENCE</p>
         <h1><span>Scattered signals.</span><em>One living idea.</em></h1>
         <div className="intro-lockup"><span>RE</span><i>CAST</i></div>
