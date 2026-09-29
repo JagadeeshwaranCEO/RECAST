@@ -48,6 +48,7 @@ import { checkClaim, exportCampaign, UnsupportedClaimError, validateCampaign } f
 import type { Asset, Campaign, ValidationResult } from "@/lib/models";
 import { AgentRoom, AssetVault, BrandControlCenter, LaunchHub, PosterStudio, SignalRadar } from "@/app/studio/ExpansionStudio";
 import { type StudioView, useCampaignStore } from "@/store/campaign-store";
+import { PRODUCTION_STORAGE_KEY, useProductionStore } from "@/store/production-store";
 import {
   LEGACY_WORKSPACE_STORAGE_KEY,
   WORKSPACE_INPUT_LIMITS,
@@ -59,13 +60,13 @@ import {
 
 const navItems: { id: StudioView; label: string; icon: typeof Home; short: string }[] = [
   { id: "home", label: "Campaign home", icon: Home, short: "Home" },
-  { id: "builder", label: "Create a campaign", icon: Plus, short: "Create" },
+  { id: "builder", label: "Campaign brief", icon: Plus, short: "Brief" },
   { id: "intelligence", label: "Campaign intelligence", icon: BookOpen, short: "Memory" },
   { id: "source", label: "Source of truth", icon: FileCheck2, short: "Source" },
   { id: "brandos", label: "Brand control center", icon: SwatchBook, short: "Brand OS" },
   { id: "agents", label: "AI agent council", icon: Bot, short: "Agents" },
   { id: "assets", label: "Brand asset vault", icon: FileImage, short: "Assets" },
-  { id: "poster", label: "Campaign poster studio", icon: Palette, short: "Poster" },
+  { id: "poster", label: "Campaign poster studio", icon: Palette, short: "Create" },
   { id: "concepts", label: "Creative concepts", icon: Sparkles, short: "Concept" },
   { id: "canvas", label: "Campaign canvas", icon: LayoutTemplate, short: "Canvas" },
   { id: "team", label: "Team studio", icon: Users, short: "Team" },
@@ -74,6 +75,9 @@ const navItems: { id: StudioView; label: string; icon: typeof Home; short: strin
   { id: "publish", label: "Launch campaign", icon: Rocket, short: "Launch" },
   { id: "radar", label: "Brand signal radar", icon: Radar, short: "Radar" },
 ];
+
+const primaryNavIds: StudioView[] = ["home", "builder", "agents", "poster", "revision", "review", "publish"];
+const primaryNavItems = primaryNavIds.map((id) => navItems.find((item) => item.id === id)!);
 
 const viewTitles: Record<StudioView, { eyebrow: string; title: string; note: string }> = {
   home: { eyebrow: "Campaign 01 · Active", title: "Stride / The New Formal", note: "One campaign source · Three connected outputs" },
@@ -138,7 +142,7 @@ function CampaignImageCredit({ credit }: { credit: string }) {
   return <span className="campaign-image-credit">Image: {credit}</span>;
 }
 
-function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+function AppSidebar({ open, onClose, onCommand }: { open: boolean; onClose: () => void; onCommand: () => void }) {
   const view = useCampaignStore((state) => state.view);
   const setView = useCampaignStore((state) => state.setView);
   return (
@@ -148,7 +152,7 @@ function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
         <img src="/recast-logo.png" alt="" aria-hidden="true" />
       </button>
       <nav className="sidebar-nav">
-        {navItems.map((item, index) => {
+        {primaryNavItems.map((item, index) => {
           const Icon = item.icon;
           return (
             <button
@@ -166,6 +170,9 @@ function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
           );
         })}
       </nav>
+      <button className="sidebar-tools" type="button" onClick={() => { onClose(); onCommand(); }} aria-label="Open all studio tools">
+        <Command size={17} /><span>All tools</span>
+      </button>
       <div className="sidebar-foot"><span>PX</span><span className="online-dot" /></div>
     </aside>
   );
@@ -174,14 +181,23 @@ function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
 function AppHeader({ onMenu, onCommand }: { onMenu: () => void; onCommand: () => void }) {
   const { campaign, view, resetDemo } = useCampaignStore();
   const resetWorkspace = useWorkspaceStore((state) => state.resetWorkspace);
+  const resetProduction = useProductionStore((state) => state.resetProduction);
   const meta = viewTitles[view];
+  const usesWorkspaceBrief = (["builder", "brandos", "agents", "assets", "poster", "team", "publish", "radar"] as StudioView[]).includes(view);
   const resetAllLocalData = () => {
     if (!window.confirm("Reset the campaign and clear this tab’s locally saved workspace?")) return;
     resetDemo();
     resetWorkspace();
+    resetProduction();
     useWorkspaceStore.persist.clearStorage();
+    useProductionStore.persist.clearStorage();
     window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
     window.sessionStorage.removeItem(WORKSPACE_STORAGE_KEY);
+    window.sessionStorage.removeItem(PRODUCTION_STORAGE_KEY);
+    for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+      const key = window.localStorage.key(index);
+      if (key?.startsWith("recast:published:")) window.localStorage.removeItem(key);
+    }
   };
   return (
     <header className="app-header">
@@ -191,7 +207,7 @@ function AppHeader({ onMenu, onCommand }: { onMenu: () => void; onCommand: () =>
         <strong>{meta.title}</strong>
       </div>
       <div className="header-meta">
-        <span className="source-version"><CircleDot size={13} /> Source v{campaign.version}</span>
+        <span className="source-version"><CircleDot size={13} /> {usesWorkspaceBrief ? "Brief synced" : `Source v${campaign.version}`}</span>
         <span className="header-note">{meta.note}</span>
         <button className="header-command" onClick={onCommand} aria-label="Open studio switcher"><Command size={14} /><span>Switch</span><kbd>⌘K</kbd></button>
         <button className="icon-button" onClick={resetAllLocalData} aria-label="Reset campaign and clear local workspace" title="Reset local demo data"><RotateCcw size={17} /></button>
@@ -330,9 +346,22 @@ function CampaignMemoryScroll({ onOpen }: { onOpen: () => void }) {
 
 function CampaignHome() {
   const { campaign, humanApproval, setView } = useCampaignStore();
+  const draft = useWorkspaceStore((state) => state.draft);
+  const agentResult = useProductionStore((state) => state.agentResult);
+  const poster = useProductionStore((state) => state.poster);
+  const launch = useProductionStore((state) => state.launch);
   const reviewCount = campaign.approvals.filter((item) => item.status !== "approved").length;
   const decisionCount = reviewCount + (humanApproval ? 0 : 1);
   const currentFacts = campaign.facts.filter((fact) => fact.status === "approved").length;
+  const runway = [
+    { id: "builder" as const, label: "Brief", note: "Brand truth", complete: Boolean(draft.brandName.trim() && draft.productName.trim() && draft.challenge.trim() && draft.proof.trim()) },
+    { id: "agents" as const, label: "Agents", note: "Campaign system", complete: Boolean(agentResult) },
+    { id: "poster" as const, label: "Create", note: "Production master", complete: Boolean(poster.headline.trim()) },
+    { id: "revision" as const, label: "Revise", note: "Meaning graph", complete: campaign.revisions.length > 0 },
+    { id: "review" as const, label: "Review", note: "Human decision", complete: humanApproval && reviewCount === 0 },
+    { id: "publish" as const, label: "Launch", note: "Shareable route", complete: launch.status === "published" },
+  ];
+  const completedSteps = runway.filter((step) => step.complete).length;
   return (
     <div className="view home-view page-enter">
       <section className="campaign-intro">
@@ -348,7 +377,23 @@ function CampaignHome() {
           <button className="button button-outline" onClick={() => setView("revision")}>
             Revise campaign <ArrowUpRight size={17} />
           </button>
-          <button className="button button-quiet" onClick={() => setView("canvas")}>Open canvas <ArrowRight size={16} /></button>
+          <button className="button button-quiet" onClick={() => setView("agents")}>Run agent council <ArrowRight size={16} /></button>
+        </div>
+      </section>
+
+      <section className="campaign-runway" aria-label="Guided campaign workflow">
+        <div className="runway-heading">
+          <div><span className="micro-label">WINNING PATH</span><strong>One brief. Six controlled decisions.</strong></div>
+          <span>{completedSteps} / {runway.length} complete</span>
+        </div>
+        <div className="runway-steps">
+          {runway.map((step, index) => (
+            <button key={step.id} type="button" className={cx(step.complete && "runway-complete")} onClick={() => setView(step.id)}>
+              <span>{step.complete ? <Check size={14} /> : String(index + 1).padStart(2, "0")}</span>
+              <div><strong>{step.label}</strong><small>{step.note}</small></div>
+              <ChevronRight size={14} />
+            </button>
+          ))}
         </div>
       </section>
 
@@ -373,8 +418,8 @@ function CampaignHome() {
         <button onClick={() => setView("source")} className="health-stat">
           <span>Approved facts</span><strong>{currentFacts}</strong><small>Current source <ChevronRight size={14} /></small>
         </button>
-        <button onClick={() => setView("canvas")} className="health-stat">
-          <span>Outputs ready</span><strong>{campaign.assets.length - reviewCount}<i>/{campaign.assets.length}</i></strong><small>Connected canvas <ChevronRight size={14} /></small>
+        <button onClick={() => setView("poster")} className="health-stat">
+          <span>Production master</span><strong>{poster.headline.trim() ? "1" : "0"}<i>/1</i></strong><small>Poster + channel pack <ChevronRight size={14} /></small>
         </button>
         <button onClick={() => setView("review")} className="health-stat health-review">
           <span>Needs review</span><strong>{decisionCount}</strong><small>{reviewCount ? "Approval changed" : humanApproval ? "Nothing outstanding" : "Human sign-off"} <ChevronRight size={14} /></small>
@@ -667,12 +712,12 @@ function CampaignBuilder() {
                 <div className="blueprint-meta"><div><span>Audience</span><strong>{draft.audience}</strong></div><div><span>Objective</span><strong>{draft.objective}</strong></div><div><span>Launch</span><strong>{draft.deadline}</strong></div></div>
                 <div className="output-plan"><span className="micro-label">CHANNEL ARCHITECTURE</span>{draft.channels.map((channel, index) => <article key={channel}><span>0{index + 1}</span><div><strong>{channel}</strong><small>{channelRole(channel)}</small></div><CheckCircle2 size={16} /></article>)}</div>
                 <div className="blueprint-trace"><BookOpen size={17} /><div><strong>Pattern provenance stays visible</strong><span>{selectedIdea.rationale} Trace: {selectedIdea.inspiredBy}.</span></div></div>
-                <div className="blueprint-actions"><button className="button button-primary" onClick={() => setView("team")}><Users size={16} /> Open team studio</button><button className="button button-outline" onClick={exportBlueprint}><Download size={16} /> Export blueprint</button></div>
+                <div className="blueprint-actions"><button className="button button-primary" onClick={() => setView("agents")}><Bot size={16} /> Run the agent council</button><button className="button button-outline" onClick={exportBlueprint}><Download size={16} /> Export blueprint</button></div>
               </div>
             </div>
           )}
 
-          <div className="builder-controls"><button className="button button-quiet" onClick={() => setStep((current) => Math.max(1, current - 1))} disabled={step === 1}>← Back</button><span>Autosaved to this device</span>{step < 4 ? <button className="button button-primary" disabled={!readiness[step - 1]} onClick={() => setStep((current) => Math.min(4, current + 1))}>Continue to {builderSteps[step].label} <ArrowRight size={15} /></button> : <button className="button button-primary" onClick={() => setView("team")}>Invite the team <UserPlus size={15} /></button>}</div>
+          <div className="builder-controls"><button className="button button-quiet" onClick={() => setStep((current) => Math.max(1, current - 1))} disabled={step === 1}>← Back</button><span>Autosaved to this device</span>{step < 4 ? <button className="button button-primary" disabled={!readiness[step - 1]} onClick={() => setStep((current) => Math.min(4, current + 1))}>Continue to {builderSteps[step].label} <ArrowRight size={15} /></button> : <button className="button button-primary" onClick={() => setView("agents")}>Run the agent council <Bot size={15} /></button>}</div>
         </section>
       </div>
     </div>
@@ -1011,7 +1056,12 @@ function ValidationRow({ result }: { result: ValidationResult }) {
 }
 
 function ReviewPublish() {
-  const { campaign, humanApproval, approveAsset, approveAffected, approveCreativeQuality } = useCampaignStore();
+  const { campaign, humanApproval, approveAsset, approveAffected, approveCreativeQuality, setView } = useCampaignStore();
+  const draft = useWorkspaceStore((state) => state.draft);
+  const poster = useProductionStore((state) => state.poster);
+  const productionAssets = useProductionStore((state) => state.assets);
+  const agentResult = useProductionStore((state) => state.agentResult);
+  const productionAsset = productionAssets.find((item) => item.id === poster.assetId) ?? productionAssets[0];
   const checks = useMemo(() => validateCampaign(campaign), [campaign]);
   const latest = campaign.revisions[0];
   const stale = campaign.approvals.filter((approval) => approval.status === "stale");
@@ -1039,6 +1089,11 @@ function ReviewPublish() {
         </section>
         <section className="approval-panel">
           <div className="panel-heading"><div><span>Human approval</span><strong>Changed outputs only</strong></div><span>{stale.length} pending</span></div>
+          <article className="production-review-card">
+            <div className="production-review-art" style={{ background: poster.backgroundColor }}>{productionAsset && <img src={productionAsset.url} alt="Current production master" />}<span>{draft.brandName}</span></div>
+            <div><small>PRODUCTION MASTER · {poster.format.toUpperCase()}</small><strong>{poster.headline.replace("\n", " ")}</strong><p>{agentResult ? `${agentResult.channelPlan.length} channel deliverables are attached to this creative system.` : "Run the agent council to attach platform-ready deliverables."}</p></div>
+            <StatusPill status={humanApproval ? "ready" : "needs_review"} />
+          </article>
           <div className="approval-list">
             {campaign.assets.map((asset) => {
               const approval = campaign.approvals.find((item) => item.assetId === asset.id)!;
@@ -1057,6 +1112,11 @@ function ReviewPublish() {
           <button onClick={downloadLinkedIn} disabled={!exportReady}><Download size={17} /><span><strong>LinkedIn post</strong><small>{exportReady ? "Plain text" : "Awaiting human sign-off"}</small></span></button>
           <button disabled={!exportReady} onClick={() => downloadFile("stride-reel-preview.txt", "SIMULATED PREVIEW EXPORT\n\n12-second Stride context-shift reel scene plan. Connect a renderer for final MP4 output.")}><PanelTop size={17} /><span><strong>Reel preview</strong><small>{exportReady ? "Simulated export · TXT" : "Awaiting human sign-off"}</small></span></button>
         </div>
+      </section>
+
+      <section className={cx("review-next-action", exportReady && "review-next-ready")}>
+        <div><span className="micro-label">FINAL CONTROL</span><h2>{exportReady ? "Approved work can now move." : "Launch stays locked until review is complete."}</h2><p>{exportReady ? "The exact poster, channel pack and governed source can continue to activation." : "Approve changed outputs and sign off creative quality to unlock launch control."}</p></div>
+        <button className="button button-primary" type="button" disabled={!exportReady} onClick={() => setView("publish")} data-testid="continue-to-launch">Continue to launch <Rocket size={16} /></button>
       </section>
 
       <section className="history-panel">
@@ -1091,8 +1151,8 @@ function CinematicIntro({ onComplete }: { onComplete: () => void }) {
 
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const leaveAfter = reduceMotion ? 180 : 4000;
-    const finishAfter = reduceMotion ? 260 : 4700;
+    const leaveAfter = reduceMotion ? 120 : 1350;
+    const finishAfter = reduceMotion ? 180 : 1750;
     const beginExit = window.setTimeout(() => setLeaving(true), leaveAfter);
     const finish = window.setTimeout(onComplete, finishAfter);
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1214,7 +1274,7 @@ export function CampaignStudio() {
       <a className="skip-link" href="#studio-content">Skip to campaign workspace</a>
       {showIntro && <CinematicIntro onComplete={completeIntro} />}
       <div className={cx("studio-shell", showIntro && "studio-awaiting")} aria-hidden={showIntro || undefined} inert={showIntro || undefined}>
-        <AppSidebar open={navOpen} onClose={() => setNavOpen(false)} />
+        <AppSidebar open={navOpen} onClose={() => setNavOpen(false)} onCommand={() => setCommandOpen(true)} />
         {navOpen && <button className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Close navigation overlay" />}
         <div className="studio-main">
           <AppHeader onMenu={() => setNavOpen(true)} onCommand={() => setCommandOpen(true)} />

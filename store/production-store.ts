@@ -114,8 +114,11 @@ export const useProductionStore = create<ProductionState>()(
     }),
     {
       name: PRODUCTION_STORAGE_KEY,
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => sessionStorage),
+      migrate: (persistedState, version) => version < 2
+        ? { ...(persistedState as Partial<ProductionState>), agentResult: null, launch: initialLaunch }
+        : persistedState as ProductionState,
       partialize: (state) => ({
         ...state,
         assets: state.assets.filter((asset) => !asset.url.startsWith("data:") || asset.size <= 1_500_000),

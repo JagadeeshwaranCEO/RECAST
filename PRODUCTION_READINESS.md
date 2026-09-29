@@ -8,7 +8,7 @@ This document separates the **verified hackathon product** from the controls req
 | Architecture | Next/Vinext UI on a Cloudflare Worker; deterministic engine in `lib/` | Ready for demo | Add a service boundary for generation jobs and tenant-scoped persistence |
 | Frontend | Responsive studio, keyboard navigation, reduced-motion support, loading/error/recovery states | Verified by E2E and source review | Run assistive-technology and real-device testing before commercial launch |
 | API/backend | Health endpoint plus Zod-validated, timed, rate-limited agent council route with local fallback | Strong demo boundary | Add distributed rate limits, idempotency keys, durable job state, tenant budgets, and provider telemetry |
-| Database/storage | Campaign source is in memory; builder, uploads, poster and launch workspace are scoped to the current browser session | Safe for public demo | Use tenant-scoped Postgres/D1 plus object storage, migrations, backups, retention, malware scanning and row-level authorization |
+| Database/storage | Campaign source is in memory; builder, uploads, poster and launch workspace are scoped to the current browser session; published text payloads can travel in a signed-off share URL | Safe for public demo | Use tenant-scoped Postgres/D1 plus object storage, migrations, backups, retention, malware scanning and row-level authorization |
 | Authentication/permissions | Optional ChatGPT header helper exists but is not an active product boundary | Public demo | Enforce trusted-proxy identity, organization membership, campaign roles, and per-action authorization |
 | Hosting/cloud | Cloudflare Worker and static assets; fixed canonical metadata origin | Ready | Add staged environments, rollbacks, regional/data-residency decisions, and budget controls |
 | CI/CD/version control | GitHub Actions runs lint, typecheck, unit tests, build, and Playwright | Configured | Protect `main`, require checks/reviews, sign releases, and automate deploy previews |
@@ -17,7 +17,7 @@ This document separates the **verified hackathon product** from the controls req
 | Caching/CDN | Hashed JS/CSS are immutable; unversioned media uses short cache + stale revalidation | Configured | Add cache analytics, purge strategy, canonical API caching rules, and regional testing |
 | Errors/logs | Route-level error boundary and structured browser console diagnostic; health endpoint | Baseline | Add privacy-filtered centralized errors, request IDs, retention rules, and operator runbooks |
 | Monitoring/alerts | `/api/health` reports service mode and deterministic-engine readiness | Baseline | Add synthetic judge-flow monitoring, SLOs, quota/cost alerts, and on-call ownership |
-| Testing | Unit coverage for revisions, research and agent governance; Playwright covers responsive, authoring and end-to-end production flows | Strong demo gate | Add provider contract, persistence, authorization, load, visual-regression, and accessibility automation |
+| Testing | Unit coverage for revisions, research and agent governance; Playwright covers responsive authoring, launch locking, human sign-off and end-to-end production flows | Strong demo gate | Add provider contract, persistence, authorization, load, visual-regression, and accessibility automation |
 | Scaling | Stateless page/engine work scales at the edge; static media is CDN-friendly | Ready for demo traffic | Move generation to queues, make writes idempotent, and add backpressure before model workloads |
 
 ## Non-negotiable production gates
@@ -34,4 +34,4 @@ Before RECAST stores real client campaigns or supports multiple organizations:
 
 ## Current security review
 
-The 2026-09-29 repository scan found two issues in the demo build: an unused public image-transform surface and durable shared-browser workspace persistence. The product source now removes that endpoint, stores workspace data in `sessionStorage`, clears the legacy key, and resets both local stores through one confirmed action.
+The 2026-09-29 repository scan found two issues in the demo build: an unused public image-transform surface and durable shared-browser workspace persistence. The product source now removes that endpoint, stores workspace data in `sessionStorage`, clears the legacy key, and resets campaign, workspace, production and locally published preview data through one confirmed action. Launch is gated on a complete brief, council output, production master, current approvals and a valid destination.

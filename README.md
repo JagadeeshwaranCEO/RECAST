@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="http://localhost:3001/"><strong>Explore the local experience ↗</strong></a>
+  <a href="https://recast-campaign-studio.kavitha1975-vlr.chatgpt.site/"><strong>Explore the live experience ↗</strong></a>
   &nbsp;·&nbsp;
   <a href="./DEMO_SCRIPT.md">3-minute judge demo</a>
   &nbsp;·&nbsp;
@@ -89,9 +89,10 @@ Machine checks verify price consistency, approved claims, locked-asset integrity
 - Multi-brand Campaign Builder for brand voice, audience, objective, proof, market, channels and visual tokens.
 - Brand OS with palette presets, typography behavior, locked production rules and live poster-token sync.
 - Six-agent campaign council for research, strategy, copy, art direction, claims and activation; optional model-assisted mode with a deterministic fallback.
+- Publish-ready channel packs with finished Instagram copy, LinkedIn posts, X threads, short-form video scripts, CTAs, hashtags, production notes, copy actions and one cohesive Markdown export.
 - Rights-aware Asset Vault for owned product imagery, campaign posters, logos and references.
 - Editable Poster Studio with 1:1, 4:5, 9:16 and 1.91:1 layouts plus real PNG export at production dimensions.
-- Launch Control with a working campaign microsite, launch timing and channel package queue.
+- Launch Control with five enforced release gates, a working campaign microsite, launch timing, channel package queue and a portable share URL.
 - Signal Radar demo for mentions, sentiment, claim risk and an insight-to-brief learning loop; external providers are clearly marked as unconnected.
 - Complete seeded Stride campaign spanning Instagram Reel, Instagram Carousel and LinkedIn.
 - Versioned source of truth for prices, claims, evidence, prohibited wording and brand rules.
@@ -101,6 +102,7 @@ Machine checks verify price consistency, approved claims, locked-asset integrity
 - Per-output approval, approve-all, revision history and deterministic demo reset.
 - Exportable campaign JSON, revision Markdown, LinkedIn copy and a labelled reel scene-plan preview.
 - Responsive, keyboard-accessible interface with loading, empty, warning, success and review states.
+- A focused seven-stage judge path; Brand OS, assets, research, collaboration and monitoring remain available through the searchable tool switcher.
 - Session-scoped workspace persistence, security headers, safe caching, health check and error boundary.
 - Automated unit, browser, type, lint and production-build gates.
 
@@ -123,7 +125,7 @@ flowchart LR
     G --> D[Block-level diff]
     D --> Q[Evidence checks]
     Q --> H[Human approval]
-    H --> L[Hosted launch + export]
+    H --> L[Shareable launch + export]
     L --> SR[Signal radar]
     SR --> B
 ```
@@ -147,13 +149,17 @@ Open [http://localhost:3001](http://localhost:3001).
 
 ```text
 Campaign home
+  → Brief
+  → Agent council + finished channel pack
+  → Poster studio
   → Revise
   → Change price
   → Inspect the dependency diff
   → Test an unsupported waterproof claim
   → Use the approved replacement
   → Review only affected outputs
-  → Approve and export
+  → Human sign-off
+  → Publish and open the shareable campaign
 ```
 
 The complete timed narration is in [DEMO_SCRIPT.md](./DEMO_SCRIPT.md).
@@ -199,7 +205,7 @@ app/
   CampaignStudio.tsx       Product experience and interaction shell
   studio/                   Brand OS, agents, assets, poster, launch and radar
   api/agents/               Rate-limited, schema-validated agent adapter
-  c/[slug]/                 Hosted campaign microsite
+  c/[slug]/                 Shareable campaign microsite
   api/health/              Operational health endpoint
   globals.css              Editorial design system and responsive layout
 lib/
@@ -225,7 +231,7 @@ This hackathon build remains fully usable without an API key. When `OPENAI_API_K
 - Persistent accounts, team tenancy and a production database are future deployment gates.
 - Reel export is a labelled scene-plan preview; a video renderer is not configured.
 - Commercial deployments require rights-cleared client photography.
-- Uploaded assets and campaign microsites are browser-local in this prototype; production requires object storage, malware scanning, rights metadata and a durable database.
+- Uploaded files remain browser-session assets in this prototype. Share links carry the approved text campaign payload and use deployment assets; production requires object storage, malware scanning, rights metadata and a durable database.
 - Social publishing and monitoring connectors are presented as explicit connection points—not as working third-party integrations—until OAuth or API credentials are configured.
 - Tone and aesthetic quality remain human-review decisions by design.
 - Model output can propose structured strategy and copy, but cannot bypass source validation or human approval.

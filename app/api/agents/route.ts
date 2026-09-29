@@ -71,7 +71,14 @@ export async function POST(request: Request) {
             }, required: ["id", "agent", "role", "title", "summary", "outputs"] } },
             channelPlan: { type: "array", minItems: 1, maxItems: 8, items: { type: "object", additionalProperties: false, properties: {
               channel: { type: "string" }, job: { type: "string" }, format: { type: "string" },
-            }, required: ["channel", "job", "format"] } },
+              deliverable: { type: "object", additionalProperties: false, properties: {
+                headline: { type: "string" },
+                body: { type: "string" },
+                cta: { type: "string" },
+                hashtags: { type: "array", maxItems: 5, items: { type: "string" } },
+                productionNotes: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } },
+              }, required: ["headline", "body", "cta", "hashtags", "productionNotes"] },
+            }, required: ["channel", "job", "format", "deliverable"] } },
           },
           required: ["mode", "campaignThesis", "findings", "channelPlan", "generatedAt"],
         } } },

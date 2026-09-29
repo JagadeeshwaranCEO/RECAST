@@ -34,17 +34,31 @@ const fallback: PublishedPayload = {
   publishedAt: "2026-09-29T00:00:00.000Z",
 };
 
+function decodeSharePayload(value: string): PublishedPayload | null {
+  try {
+    const normalized = value.replaceAll("-", "+").replaceAll("_", "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes)) as PublishedPayload;
+  } catch {
+    return null;
+  }
+}
+
 export default function PublishedCampaign() {
   const savedCampaign = useSyncExternalStore(
     () => () => undefined,
     () => {
       const slug = window.location.pathname.split("/").filter(Boolean).pop() ?? "campaign";
-      return localStorage.getItem(`recast:published:${slug}`) ?? "";
+      return new URLSearchParams(window.location.search).get("campaign") ?? localStorage.getItem(`recast:published:${slug}`) ?? "";
     },
     () => "",
   );
   const campaign = useMemo(() => {
     if (!savedCampaign) return fallback;
+    const shared = decodeSharePayload(savedCampaign);
+    if (shared) return { ...fallback, ...shared };
     try { return { ...fallback, ...JSON.parse(savedCampaign) as PublishedPayload }; }
     catch { return fallback; }
   }, [savedCampaign]);

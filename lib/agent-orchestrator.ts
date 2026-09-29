@@ -28,7 +28,18 @@ export const AgentCouncilResultSchema = z.object({
   mode: z.enum(["ai", "local"]),
   campaignThesis: z.string(),
   findings: z.array(AgentFindingSchema).min(4).max(8),
-  channelPlan: z.array(z.object({ channel: z.string(), job: z.string(), format: z.string() })).min(1).max(8),
+  channelPlan: z.array(z.object({
+    channel: z.string(),
+    job: z.string(),
+    format: z.string(),
+    deliverable: z.object({
+      headline: z.string(),
+      body: z.string(),
+      cta: z.string(),
+      hashtags: z.array(z.string()).max(5),
+      productionNotes: z.array(z.string()).min(1).max(4),
+    }),
+  })).min(1).max(8),
   generatedAt: z.string(),
 });
 
@@ -44,6 +55,64 @@ const channelFormats: Record<string, string> = {
   Website: "Campaign landing page",
   Pinterest: "Editorial pin set",
 };
+
+function hashtag(value: string) {
+  return `#${value.replace(/[^a-z0-9]/gi, "")}`;
+}
+
+function buildChannelDeliverable(channel: string, brief: AgentBrief, proofLead: string) {
+  const product = brief.productName;
+  const promise = brief.promise.replace(/[.!?]+$/, "");
+  const shared = {
+    headline: promise,
+    cta: `Meet ${product}`,
+    hashtags: [hashtag(brief.brandName), hashtag(product), "#DesignedWithProof"],
+    productionNotes: ["Use only approved proof", `Voice: ${brief.tone}`, `Market: ${brief.market}`],
+  };
+
+  if (channel === "Instagram") return {
+    ...shared,
+    body: `${promise}.\n\n${proofLead}. Built for ${brief.audience.toLowerCase()}.\n\nSave this for the moment your day changes—and take the same point of view with you.`,
+    productionNotes: ["4:5 hero first", "Carousel: tension → proof → detail → CTA", "Keep the first 125 characters self-contained"],
+  };
+  if (channel === "LinkedIn") return {
+    ...shared,
+    body: `Most products are presented as a list of features. We started with a human tension instead: ${brief.challenge}.\n\nThat led to ${product}—${brief.promise.toLowerCase()}. The proof is specific: ${proofLead}.\n\nThe campaign gives every channel a different job while keeping one source of truth.`,
+    hashtags: [hashtag(brief.brandName), "#BrandStrategy", "#CreativeOperations"],
+    productionNotes: ["Lead with the design decision", "Break before the proof paragraph", "Pair with the 1:1 proof card"],
+  };
+  if (channel === "X") return {
+    ...shared,
+    body: `1/ ${promise}.\n\n2/ The tension: ${brief.challenge}.\n\n3/ The proof: ${proofLead}.\n\n4/ One campaign truth. Native executions. ${shared.cta}.`,
+    hashtags: [hashtag(brief.brandName)],
+    productionNotes: ["Publish as a four-post thread", "Attach the proof card to post 3", "Pin the CTA reply"],
+  };
+  if (channel === "YouTube Shorts" || channel === "TikTok") return {
+    ...shared,
+    headline: `What changes when your day does?`,
+    body: `00–03s — Show the tension: ${brief.challenge}.\n03–08s — Reveal ${product}.\n08–12s — Prove it: ${proofLead}.\n12–15s — ${promise}. ${shared.cta}.`,
+    hashtags: [hashtag(brief.brandName), "#Shorts", "#DesignedWithProof"],
+    productionNotes: ["9:16 safe crop", "Burn in captions", "Reveal proof before the CTA"],
+  };
+  if (channel === "Email") return {
+    ...shared,
+    headline: `${promise} — meet ${product}`,
+    body: `You should not have to choose between a product that looks right and one that keeps up. ${product} is built around one promise: ${brief.promise}.\n\nApproved proof: ${proofLead}.\n\n${shared.cta}.`,
+    hashtags: [],
+    productionNotes: ["Subject under 55 characters", "One hero image", "Repeat one CTA after proof"],
+  };
+  if (channel === "Out-of-home") return {
+    ...shared,
+    body: `${proofLead}.`,
+    hashtags: [],
+    productionNotes: ["Seven-word headline target", "One proof line", "High-contrast CTA or URL"],
+  };
+  return {
+    ...shared,
+    body: `${promise}. ${proofLead}. ${shared.cta}.`,
+    productionNotes: ["Adapt to the native format", "Keep the approved proof visible", "Use one unambiguous CTA"],
+  };
+}
 
 export function runLocalCampaignCouncil(input: AgentBrief): AgentCouncilResult {
   const brief = AgentBriefSchema.parse(input);
@@ -110,6 +179,7 @@ export function runLocalCampaignCouncil(input: AgentBrief): AgentCouncilResult {
       channel,
       job: index === 0 ? "Create recognition" : index === brief.channels.length - 1 ? "Convert intent" : "Build proof",
       format: channelFormats[channel] ?? "Native channel asset",
+      deliverable: buildChannelDeliverable(channel, brief, proofLead),
     })),
   };
 }
@@ -130,5 +200,6 @@ export function agentSystemPrompt(brief: AgentBrief): string {
     `VOICE: ${brief.tone}`,
     `MARKET: ${brief.market}`,
     `CHANNELS: ${brief.channels.join(", ")}`,
+    "For every channelPlan item, write a complete publish-ready deliverable: headline, body, CTA, optional hashtags, and production notes. Do not return placeholders.",
   ].join("\n");
 }

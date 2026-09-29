@@ -18,6 +18,7 @@ type CampaignState = {
   approveAsset: (assetId: string) => void;
   approveAffected: () => void;
   approveCreativeQuality: () => void;
+  revokeCreativeApproval: () => void;
   updateBrandRule: (id: string, value: string) => void;
   selectConcept: (id: string) => void;
   clearNotice: () => void;
@@ -83,6 +84,9 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
     humanApproval: true,
     notice: "Creative quality signed off by the human reviewer.",
   }),
+  revokeCreativeApproval: () => set((state) => state.humanApproval
+    ? { humanApproval: false, notice: "Creative sign-off reopened because production changed." }
+    : {}),
   updateBrandRule: (id, value) => set((state) => ({
     campaign: {
       ...state.campaign,

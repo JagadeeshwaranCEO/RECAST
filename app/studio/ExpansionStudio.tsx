@@ -9,6 +9,7 @@ import {
   CalendarClock,
   Check,
   CheckCircle2,
+  Copy,
   Download,
   ExternalLink,
   ImagePlus,
@@ -80,6 +81,24 @@ function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function downloadTextFile(name: string, content: string, type = "text/markdown") {
+  const blob = new Blob([content], { type });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
+
+function encodeSharePayload(payload: unknown) {
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  let binary = "";
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 }
 
 export function BrandControlCenter() {
@@ -231,6 +250,7 @@ export function AgentRoom() {
   const [running, setRunning] = useState(false);
   const [activeAgent, setActiveAgent] = useState(0);
   const [error, setError] = useState("");
+  const [copiedChannel, setCopiedChannel] = useState("");
 
   const brief = useMemo(() => ({
     brandName: draft.brandName,
@@ -262,6 +282,49 @@ export function AgentRoom() {
   };
 
   const current = result?.findings[activeAgent];
+  const channelCopy = (channel: NonNullable<typeof result>["channelPlan"][number]) => [
+    channel.deliverable.headline,
+    "",
+    channel.deliverable.body,
+    "",
+    channel.deliverable.cta,
+    channel.deliverable.hashtags.join(" "),
+  ].filter(Boolean).join("\n");
+  const copyDeliverable = async (channel: NonNullable<typeof result>["channelPlan"][number]) => {
+    await navigator.clipboard.writeText(channelCopy(channel));
+    setCopiedChannel(channel.channel);
+    window.setTimeout(() => setCopiedChannel(""), 1800);
+  };
+  const exportChannelPack = () => {
+    if (!result) return;
+    const content = [
+      `# ${draft.brandName} — ${draft.productName}`,
+      "",
+      `> ${result.campaignThesis}`,
+      "",
+      `Generated: ${new Date(result.generatedAt).toLocaleString("en-IN")}`,
+      `Mode: ${result.mode === "ai" ? "Model-assisted" : "Governed deterministic fallback"}`,
+      "",
+      ...result.channelPlan.flatMap((channel) => [
+        `## ${channel.channel} — ${channel.format}`,
+        "",
+        `**Job:** ${channel.job}`,
+        "",
+        `**Headline:** ${channel.deliverable.headline}`,
+        "",
+        channel.deliverable.body,
+        "",
+        `**CTA:** ${channel.deliverable.cta}`,
+        channel.deliverable.hashtags.length ? channel.deliverable.hashtags.join(" ") : "",
+        "",
+        `**Production notes:** ${channel.deliverable.productionNotes.join(" · ")}`,
+        "",
+      ]),
+      "---",
+      `Approved proof source: ${draft.proof}`,
+    ].join("\n");
+    downloadTextFile(`${draft.brandName.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "campaign"}-channel-pack.md`, content);
+  };
 
   return (
     <div className="view production-view">
@@ -295,15 +358,29 @@ export function AgentRoom() {
           </section>
           {error && <p className="agent-error" role="status">{error}</p>}
           <section className="agent-workspace">
-            <div className="agent-roster" role="tablist" aria-label="Campaign agents">
-              {result.findings.map((finding, index) => <button key={finding.id} role="tab" aria-selected={activeAgent === index} className={activeAgent === index ? "agent-active" : ""} onClick={() => setActiveAgent(index)}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{finding.agent}</strong><small>{finding.role}</small></div><CheckCircle2 size={15} /></button>)}
+            <div className="agent-roster" role="tablist" aria-label="Campaign agents" onKeyDown={(event) => {
+              if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+              event.preventDefault();
+              const direction = event.key === "ArrowDown" || event.key === "ArrowRight" ? 1 : -1;
+              const next = (activeAgent + direction + result.findings.length) % result.findings.length;
+              setActiveAgent(next);
+              document.getElementById(`agent-tab-${next}`)?.focus();
+            }}>
+              {result.findings.map((finding, index) => <button id={`agent-tab-${index}`} aria-controls="agent-report-panel" key={finding.id} role="tab" tabIndex={activeAgent === index ? 0 : -1} aria-selected={activeAgent === index} className={activeAgent === index ? "agent-active" : ""} onClick={() => setActiveAgent(index)}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{finding.agent}</strong><small>{finding.role}</small></div><CheckCircle2 size={15} /></button>)}
             </div>
-            {current && <article className="agent-report"><span>{current.role}</span><h2>{current.title}</h2><p>{current.summary}</p><div>{current.outputs.map((output) => <span key={output}><Check size={13} />{output}</span>)}</div></article>}
+            {current && <article id="agent-report-panel" role="tabpanel" aria-labelledby={`agent-tab-${activeAgent}`} className="agent-report"><span>{current.role}</span><h2>{current.title}</h2><p>{current.summary}</p><div>{current.outputs.map((output) => <span key={output}><Check size={13} />{output}</span>)}</div></article>}
           </section>
-          <section className="channel-plan">
-            <div className="panel-heading"><div><span>CHANNEL ORCHESTRATION</span><strong>One idea, native jobs</strong></div><Megaphone size={18} /></div>
-            <div>{result.channelPlan.map((channel, index) => <article key={channel.channel}><span>{String(index + 1).padStart(2, "0")}</span><strong>{channel.channel}</strong><p>{channel.job}</p><small>{channel.format}</small></article>)}</div>
-            <button className="button button-primary" onClick={() => setView("poster")}>Build the campaign poster <ArrowRight size={16} /></button>
+          <section className="channel-plan channel-pack">
+            <div className="panel-heading"><div><span>PUBLISH-READY CHANNEL PACK</span><strong>One idea. Finished native executions.</strong></div><Megaphone size={18} /></div>
+            <div className="channel-pack-grid">{result.channelPlan.map((channel, index) => <article key={channel.channel} className="channel-deliverable">
+              <div className="channel-deliverable-head"><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{channel.channel}</strong><small>{channel.format} · {channel.job}</small></div><button type="button" onClick={() => copyDeliverable(channel)} aria-label={`Copy ${channel.channel} deliverable`}><Copy size={14} />{copiedChannel === channel.channel ? "Copied" : "Copy"}</button></div>
+              <h3>{channel.deliverable.headline}</h3>
+              <p className="channel-body">{channel.deliverable.body}</p>
+              <div className="channel-cta"><span>CTA</span><strong>{channel.deliverable.cta}</strong></div>
+              {channel.deliverable.hashtags.length > 0 && <p className="channel-tags">{channel.deliverable.hashtags.join(" ")}</p>}
+              <ul>{channel.deliverable.productionNotes.map((note) => <li key={note}>{note}</li>)}</ul>
+            </article>)}</div>
+            <div className="channel-pack-actions"><button className="button button-outline" type="button" onClick={exportChannelPack}><Download size={16} /> Export complete channel pack</button><button className="button button-primary" onClick={() => setView("poster")}>Build the campaign poster <ArrowRight size={16} /></button></div>
           </section>
         </>
       )}
@@ -390,9 +467,14 @@ export function PosterStudio() {
   const poster = useProductionStore((state) => state.poster);
   const updatePoster = useProductionStore((state) => state.updatePoster);
   const setView = useCampaignStore((state) => state.setView);
+  const revokeCreativeApproval = useCampaignStore((state) => state.revokeCreativeApproval);
   const asset = assets.find((item) => item.id === poster.assetId) ?? assets[0];
   const dimensions = posterDimensions[poster.format];
   const style = { "--poster-bg": poster.backgroundColor, "--poster-accent": poster.accentColor, "--poster-text": poster.textColor, aspectRatio: `${dimensions.width} / ${dimensions.height}` } as React.CSSProperties;
+  const applyPosterPatch = (patch: Partial<PosterDraft>) => {
+    updatePoster(patch);
+    revokeCreativeApproval();
+  };
 
   return (
     <div className="view production-view poster-studio-view">
@@ -400,13 +482,13 @@ export function PosterStudio() {
       <section className="poster-workspace">
         <div className="poster-controls">
           <div className="panel-heading"><div><span>ART DIRECTION</span><strong>Poster controls</strong></div><Palette size={18} /></div>
-          <fieldset><legend>Format</legend><div className="poster-choice-grid">{posterFormats.map(([id, item]) => <button type="button" key={id} className={poster.format === id ? "selected" : ""} onClick={() => updatePoster({ format: id })}><strong>{id}</strong><small>{item.label}</small></button>)}</div></fieldset>
-          <fieldset><legend>Layout system</legend><div className="poster-layout-list">{posterLayouts.map((layout) => <button type="button" key={layout.id} className={poster.layout === layout.id ? "selected" : ""} onClick={() => updatePoster({ layout: layout.id })}><Layers3 size={15} /><span><strong>{layout.label}</strong><small>{layout.note}</small></span></button>)}</div></fieldset>
-          <label><span>Headline</span><textarea value={poster.headline} maxLength={110} onChange={(event) => updatePoster({ headline: event.target.value })} /></label>
-          <label><span>Support line</span><input value={poster.subheadline} maxLength={100} onChange={(event) => updatePoster({ subheadline: event.target.value })} /></label>
-          <label><span>Call to action</span><input value={poster.cta} maxLength={50} onChange={(event) => updatePoster({ cta: event.target.value })} /></label>
-          <div className="poster-colors"><label><span>Background</span><input type="color" value={poster.backgroundColor} onChange={(event) => updatePoster({ backgroundColor: event.target.value })} /></label><label><span>Accent</span><input type="color" value={poster.accentColor} onChange={(event) => updatePoster({ accentColor: event.target.value })} /></label><label><span>Type</span><input type="color" value={poster.textColor} onChange={(event) => updatePoster({ textColor: event.target.value })} /></label></div>
-          <label><span>Campaign image</span><select value={poster.assetId} onChange={(event) => updatePoster({ assetId: event.target.value })}>{assets.filter((item) => item.kind !== "Logo").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <fieldset><legend>Format</legend><div className="poster-choice-grid">{posterFormats.map(([id, item]) => <button type="button" key={id} className={poster.format === id ? "selected" : ""} onClick={() => applyPosterPatch({ format: id })}><strong>{id}</strong><small>{item.label}</small></button>)}</div></fieldset>
+          <fieldset><legend>Layout system</legend><div className="poster-layout-list">{posterLayouts.map((layout) => <button type="button" key={layout.id} className={poster.layout === layout.id ? "selected" : ""} onClick={() => applyPosterPatch({ layout: layout.id })}><Layers3 size={15} /><span><strong>{layout.label}</strong><small>{layout.note}</small></span></button>)}</div></fieldset>
+          <label><span>Headline</span><textarea value={poster.headline} maxLength={110} onChange={(event) => applyPosterPatch({ headline: event.target.value })} /></label>
+          <label><span>Support line</span><input value={poster.subheadline} maxLength={100} onChange={(event) => applyPosterPatch({ subheadline: event.target.value })} /></label>
+          <label><span>Call to action</span><input value={poster.cta} maxLength={50} onChange={(event) => applyPosterPatch({ cta: event.target.value })} /></label>
+          <div className="poster-colors"><label><span>Background</span><input type="color" value={poster.backgroundColor} onChange={(event) => applyPosterPatch({ backgroundColor: event.target.value })} /></label><label><span>Accent</span><input type="color" value={poster.accentColor} onChange={(event) => applyPosterPatch({ accentColor: event.target.value })} /></label><label><span>Type</span><input type="color" value={poster.textColor} onChange={(event) => applyPosterPatch({ textColor: event.target.value })} /></label></div>
+          <label><span>Campaign image</span><select value={poster.assetId} onChange={(event) => applyPosterPatch({ assetId: event.target.value })}>{assets.filter((item) => item.kind !== "Logo").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         </div>
 
         <div className="poster-stage">
@@ -418,7 +500,7 @@ export function PosterStudio() {
             <div className="poster-copy"><h2>{poster.headline.split("\n").map((line) => <span key={line}>{line}</span>)}</h2><p>{poster.subheadline}</p><strong>{poster.cta} <ArrowRight size={14} /></strong></div>
             <div className="poster-safe-zone" aria-hidden="true" />
           </article>
-          <div className="poster-actions"><button className="button button-primary" onClick={() => asset && exportPoster(poster, asset.url, draft.brandName)} data-testid="export-poster"><Download size={16} /> Export production PNG</button><button className="button button-outline" onClick={() => setView("publish")}><Rocket size={16} /> Continue to launch</button></div>
+          <div className="poster-actions"><button className="button button-primary" onClick={() => asset && exportPoster(poster, asset.url, draft.brandName)} data-testid="export-poster"><Download size={16} /> Export production PNG</button><button className="button button-outline" onClick={() => setView("review")}><ShieldCheck size={16} /> Continue to review</button></div>
         </div>
       </section>
     </div>
@@ -432,41 +514,67 @@ export function LaunchHub() {
   const launch = useProductionStore((state) => state.launch);
   const setLaunch = useProductionStore((state) => state.setLaunch);
   const agentResult = useProductionStore((state) => state.agentResult);
+  const campaign = useCampaignStore((state) => state.campaign);
+  const humanApproval = useCampaignStore((state) => state.humanApproval);
+  const setView = useCampaignStore((state) => state.setView);
   const [notice, setNotice] = useState("");
   const asset = assets.find((item) => item.id === poster.assetId) ?? assets[0];
   const path = `/c/${launch.slug || "campaign"}`;
+  const staleApprovals = campaign.approvals.filter((approval) => approval.status !== "approved").length;
+  const launchChecks = [
+    { label: "Brief", ready: Boolean(draft.brandName.trim() && draft.productName.trim() && draft.proof.trim()) },
+    { label: "Agent council", ready: Boolean(agentResult) },
+    { label: "Production master", ready: Boolean(asset && poster.headline.trim() && poster.cta.trim()) },
+    { label: "Human approval", ready: humanApproval && staleApprovals === 0 },
+    { label: "Destination", ready: Boolean(launch.slug.trim() && launch.channels.length) },
+  ];
+  const readyCount = launchChecks.filter((check) => check.ready).length;
+  const launchReady = readyCount === launchChecks.length;
+  const payload = {
+    brandName: draft.brandName,
+    productName: draft.productName,
+    headline: poster.headline,
+    subheadline: poster.subheadline,
+    cta: poster.cta,
+    imageUrl: asset?.url.startsWith("data:") ? undefined : asset?.url,
+    backgroundColor: poster.backgroundColor,
+    accentColor: poster.accentColor,
+    proof: draft.proof,
+    thesis: agentResult?.campaignThesis ?? draft.promise,
+    publishedAt: launch.publishedAt ?? new Date().toISOString(),
+  };
+  const sharePath = `${path}?campaign=${encodeSharePayload(payload)}`;
 
   const publish = () => {
-    const payload = {
-      brandName: draft.brandName,
-      productName: draft.productName,
-      headline: poster.headline,
-      subheadline: poster.subheadline,
-      cta: poster.cta,
-      imageUrl: asset?.url,
-      backgroundColor: poster.backgroundColor,
-      accentColor: poster.accentColor,
-      proof: draft.proof,
-      thesis: agentResult?.campaignThesis ?? draft.promise,
-      publishedAt: new Date().toISOString(),
-    };
-    localStorage.setItem(`recast:published:${launch.slug}`, JSON.stringify(payload));
-    setLaunch({ status: "published", publishedAt: payload.publishedAt });
-    setNotice(`Campaign published to ${path}`);
+    if (!launchReady) return;
+    const publishedPayload = { ...payload, publishedAt: new Date().toISOString() };
+    localStorage.setItem(`recast:published:${launch.slug}`, JSON.stringify(publishedPayload));
+    setLaunch({ status: "published", publishedAt: publishedPayload.publishedAt });
+    setNotice(`Shareable campaign route is live at ${path}`);
   };
 
   const schedule = () => {
+    if (!launchReady) return;
     setLaunch({ status: "scheduled" });
     setNotice(`Launch queued for ${new Date(launch.launchAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}.`);
   };
 
   return (
     <div className="view production-view">
-      {sectionHeading("04 · LAUNCH CONTROL", "From approved work", "to a live campaign.", "Package the campaign as a hosted launch page, prepare channel-native publishing slots and keep human approval between agent output and public activation.")}
+      {sectionHeading("06 · LAUNCH CONTROL", "From approved work", "to a shareable campaign.", "Publish a deployment-relative campaign route, prepare channel-native activation slots and keep human approval between agent output and public activation.")}
       <section className="launch-status-row">
         <div><span>Campaign state</span><strong>{launch.status}</strong><small>{launch.status === "published" ? launch.publishedAt ? `Live since ${new Date(launch.publishedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}` : "Live now" : "Human activation required"}</small></div>
-        <div><span>Brand checks</span><strong>6 / 6 ready</strong><small>Source, claims, assets, crop, CTA and ownership</small></div>
+        <div><span>Release gates</span><strong>{readyCount} / {launchChecks.length} ready</strong><small>{launchReady ? "Brief, council, master, approval and destination" : launchChecks.filter((check) => !check.ready).map((check) => check.label).join(" · ")}</small></div>
         <div><span>Agent handoff</span><strong>{agentResult ? "Council complete" : "Not run yet"}</strong><small>{agentResult?.mode === "ai" ? "Model-assisted" : "Governed local plan"}</small></div>
+      </section>
+
+      <section className="launch-gates" aria-label="Launch readiness gates">
+        {launchChecks.map((check) => <button key={check.label} type="button" className={check.ready ? "gate-ready" : ""} onClick={() => {
+          if (check.label === "Brief") setView("builder");
+          if (check.label === "Agent council") setView("agents");
+          if (check.label === "Production master") setView("poster");
+          if (check.label === "Human approval") setView("review");
+        }}><span>{check.ready ? <Check size={13} /> : <LockKeyhole size={13} />}</span><strong>{check.label}</strong><small>{check.ready ? "Ready" : "Open to complete"}</small></button>)}
       </section>
 
       <section className="launch-grid">
@@ -475,13 +583,14 @@ export function LaunchHub() {
           <label><span>Campaign slug</span><div className="slug-control"><small>/c/</small><input value={launch.slug} maxLength={64} onChange={(event) => setLaunch({ slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-") })} /></div></label>
           <label><span>Launch date and time</span><input type="datetime-local" value={launch.launchAt} onChange={(event) => setLaunch({ launchAt: event.target.value })} /></label>
           <fieldset><legend>Activation destinations</legend><div className="launch-channels">{["Campaign page", "Instagram", "LinkedIn", "YouTube Shorts", "Email"].map((channel) => { const selected = launch.channels.includes(channel); return <button type="button" key={channel} className={selected ? "selected" : ""} onClick={() => setLaunch({ channels: selected ? launch.channels.filter((item) => item !== channel) : [...launch.channels, channel] })}>{selected && <Check size={13} />}{channel}</button>; })}</div></fieldset>
-          <div className="launch-actions"><button className="button button-outline" onClick={schedule}><CalendarClock size={16} /> Schedule activation</button><button className="button button-primary" onClick={publish} data-testid="publish-campaign"><Rocket size={16} /> Publish campaign page</button></div>
+          <div className="launch-actions"><button className="button button-outline" onClick={schedule} disabled={!launchReady}><CalendarClock size={16} /> Schedule activation</button><button className="button button-primary" onClick={publish} disabled={!launchReady} data-testid="publish-campaign"><Rocket size={16} /> Publish shareable campaign</button></div>
+          {!launchReady && <p className="launch-blocked"><LockKeyhole size={14} /> Launch is intentionally locked. Complete every release gate above.</p>}
           {notice && <p className="launch-notice" role="status"><CheckCircle2 size={15} />{notice}</p>}
-          {launch.status === "published" && <a className="published-link" href={path} target="_blank" rel="noreferrer"><Link2 size={15} />Open published campaign <ExternalLink size={14} /></a>}
+          {launch.status === "published" && <div className="published-actions"><a className="published-link" href={sharePath} target="_blank" rel="noreferrer"><Link2 size={15} />Open published campaign <ExternalLink size={14} /></a><button type="button" onClick={async () => { await navigator.clipboard.writeText(`${window.location.origin}${sharePath}`); setNotice("Share link copied to clipboard."); }}><Copy size={14} /> Copy share link</button></div>}
         </div>
 
         <div className="launch-preview">
-          <div className="panel-heading"><div><span>LIVE PREVIEW</span><strong>{path}</strong></div><span>{launch.status.toUpperCase()}</span></div>
+          <div className="panel-heading"><div><span>LIVE PREVIEW</span><strong>{path}</strong></div><span>{launchReady ? launch.status.toUpperCase() : "LOCKED"}</span></div>
           <article style={{ background: poster.backgroundColor }}>
             {asset && <img src={asset.url} alt="Campaign page preview" />}
             <div><span>{draft.brandName} / {draft.productName}</span><h2>{poster.headline.split("\n")[0]}</h2><p>{agentResult?.campaignThesis ?? draft.promise}</p><strong>{poster.cta} <ArrowRight size={14} /></strong></div>
@@ -492,7 +601,7 @@ export function LaunchHub() {
         </div>
       </section>
 
-      <section className="production-contract"><LockKeyhole size={18} /><div><strong>Production activation contract</strong><p>This build publishes a working campaign page inside the local RECAST deployment. Production social publishing requires OAuth channel connections, encrypted tokens, queue workers, retry policies, webhooks and platform review—those boundaries are not simulated as completed integrations.</p></div></section>
+      <section className="production-contract"><LockKeyhole size={18} /><div><strong>Production activation contract</strong><p>This build publishes a deployment-relative campaign page with a portable approved text payload. Browser-only uploaded media falls back to deployment assets. Production social publishing still requires OAuth channel connections, encrypted tokens, queue workers, retry policies, webhooks and platform review—those boundaries are not simulated.</p></div></section>
     </div>
   );
 }

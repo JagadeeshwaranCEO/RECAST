@@ -73,7 +73,8 @@ test("campaign memory and intelligence library stay responsive", async ({ page }
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStudio(page);
   await expect(page.getByRole("heading", { name: "Fifty years of attention." })).toBeVisible();
-  await page.getByTestId("nav-intelligence").click();
+  await page.keyboard.press("Meta+k");
+  await page.getByTestId("command-intelligence").click();
   await expect(page.getByRole("heading", { name: "The model remembers why people cared." })).toBeVisible();
   await expect(page.getByText("Pattern Library · R2", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Five archives. Five different jobs." })).toBeVisible();
@@ -95,9 +96,7 @@ test("campaign memory and intelligence library stay responsive", async ({ page }
   expect(layout.documentWidth).toBe(layout.viewportWidth);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await openStudio(page);
-  await page.getByRole("button", { name: "Open navigation" }).click();
-  await page.getByTestId("nav-intelligence").click();
+  await page.goto("/?view=intelligence");
   await page.getByTestId("research-source-ads-of-the-world").click();
   await expect(page.getByRole("heading", { name: "Ads of the World", exact: true })).toBeVisible();
   const mobileLayout = await page.evaluate(() => ({
@@ -121,7 +120,8 @@ test("brand team can create a campaign and move work through the studio", async 
 
   await page.getByTestId("builder-step-4").click();
   await expect(page.getByTestId("launch-blueprint")).toContainText("Let the proof look risky");
-  await page.getByRole("button", { name: "Open team studio" }).click();
+  await page.keyboard.press("Meta+k");
+  await page.getByTestId("command-team").click();
   await expect(page.getByRole("heading", { name: "One room for the work and the decisions." })).toBeVisible();
 
   await page.getByTestId("task-status-task-2").selectOption("Approved");
@@ -138,12 +138,14 @@ test("production flow connects brand governance, agents, uploads, design, launch
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStudio(page);
 
-  await page.getByTestId("nav-brandos").click();
+  await page.keyboard.press("Meta+k");
+  await page.getByTestId("command-brandos").click();
   await expect(page.getByRole("heading", { name: "Make the brand usable. Then make it impossible to dilute." })).toBeVisible();
   await page.getByRole("button", { name: /Digital atelier/ }).click();
   await expect(page.getByText("Five systems, one campaign flow")).toBeVisible();
 
-  await page.getByTestId("nav-assets").click();
+  await page.keyboard.press("Meta+k");
+  await page.getByTestId("command-assets").click();
   await page.getByTestId("asset-upload").setInputFiles({
     name: "approved-product.png",
     mimeType: "image/png",
@@ -162,11 +164,25 @@ test("production flow connects brand governance, agents, uploads, design, launch
   await expect(page.getByTestId("poster-preview")).toContainText("ONE LOOK. EVERY TURN.");
 
   await page.getByTestId("nav-publish").click();
+  await expect(page.getByTestId("publish-campaign")).toBeDisabled();
+  await expect(page.getByText(/Launch is intentionally locked/)).toBeVisible();
+  await page.getByTestId("nav-review").click();
+  await page.getByTestId("approve-creative-quality").click();
+  await page.getByTestId("continue-to-launch").click();
   await page.getByTestId("publish-campaign").click();
-  await expect(page.getByText(/Campaign published to/)).toBeVisible();
-  await expect(page.getByRole("link", { name: /Open published campaign/ })).toBeVisible();
+  await expect(page.getByText(/Shareable campaign route is live/)).toBeVisible();
+  const publishedLink = page.getByRole("link", { name: /Open published campaign/ });
+  await expect(publishedLink).toBeVisible();
+  const publishedHref = await publishedLink.getAttribute("href");
+  expect(publishedHref).toContain("?campaign=");
+  const sharedPage = await page.context().newPage();
+  await sharedPage.goto(publishedHref!);
+  await expect(sharedPage.getByRole("heading", { name: "ONE LOOK. EVERY TURN." })).toBeVisible();
+  await expect(sharedPage.getByText("VERIFIED CAMPAIGN PROOF", { exact: true })).toBeVisible();
+  await sharedPage.close();
 
-  await page.getByTestId("nav-radar").click();
+  await page.keyboard.press("Meta+k");
+  await page.getByTestId("command-radar").click();
   await expect(page.getByRole("heading", { name: "Launch is not the finish. The campaign learns in public." })).toBeVisible();
   await page.getByRole("button", { name: "risk", exact: true }).click();
   await expect(page.getByText("Claim clarity", { exact: true })).toBeVisible();
@@ -221,6 +237,7 @@ test("reset clears the session workspace and legacy browser data", async ({ page
   const storage = await page.evaluate(() => ({
     legacy: localStorage.getItem("recast-brand-studio-v1"),
     current: sessionStorage.getItem("recast-brand-studio-v2"),
+    production: sessionStorage.getItem("recast-production-studio-v1"),
   }));
-  expect(storage).toEqual({ legacy: null, current: null });
+  expect(storage).toEqual({ legacy: null, current: null, production: null });
 });

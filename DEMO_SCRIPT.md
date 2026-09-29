@@ -1,79 +1,63 @@
 # RECAST — exact 3-minute judge demo
 
-## 0:00–0:20 — The promise
+## 0:00–0:20 — The thesis
 
-Open `/` on the campaign home.
-
-Say:
-
-> “This is RECAST. Small agencies don’t really manage posts—they manage meaning repeated across many posts. RECAST makes that meaning one connected campaign source. Change it once, and only the creative that depends on it moves.”
-
-Point to the Desk, Transit, and Weekend timeline, then the health strip: five current facts, three outputs, zero reviews.
-
-## 0:20–0:45 — Show that any brand can enter
-
-Open **Create**, then **Brand OS**.
+Open `/` on Campaign Home and point to the six-step Winning Path.
 
 Say:
 
-> “RECAST starts from a real brand brief: audience, promise, proof, market, voice and channels. Brand OS turns that into shared visual tokens and rules, so a creator can move quickly without diluting the brand.”
+> “Generators make assets. RECAST keeps an entire campaign correct when brand truth changes. One brief becomes native content, production creative, evidence checks, human approval and a shareable launch.”
 
-## 0:45–1:20 — Agents to production
+## 0:20–0:55 — Any brand in, finished campaign out
 
-Open **Agents**, run the council, then open **Poster**.
-
-Say:
-
-> “Six accountable agents work from the same governed source: research, strategy, copy, art direction, claims and activation. They return one campaign thesis and native channel jobs. Their output becomes editable work—not a chat transcript. Here I can change the layout, format, copy, colour and campaign image, then export a production-sized PNG.”
-
-## 1:20–2:05 — The memorable price revision
-
-Open **Revise**. Change the price from **₹2,499** to **₹2,299** and click **Apply to campaign**.
+Open **Create**. Change the brand, product, audience, promise, proof and selected channels, then continue to **Agents** and run the council.
 
 Say:
 
-> “The client changed the launch price. RECAST creates `fact.price.v2`, traverses explicit dependency edges, and updates exactly two blocks: the Reel end card and the Carousel offer slide.”
+> “Six accountable agents work from the same governed brief: research, strategy, copy, art direction, claims and activation. This is not a chat transcript. RECAST returns finished Instagram copy, a LinkedIn post, a short-form video script, CTAs, hashtags and production notes.”
 
-Point to both before/after diffs.
+Copy one deliverable and point to **Export complete channel pack**.
 
-Then point to the preserved LinkedIn card and say:
+## 0:55–1:20 — Production, not prompts
 
-> “LinkedIn has no price dependency, so both its copy and its approval stay untouched. This is selective revision, not find-and-replace.”
-
-Point to the green integrity bar:
-
-> “And the locked photography and logo hashes are unchanged.”
-
-## 2:05–2:30 — Claim safety
-
-In **Claim guard**, keep the request: **“Make it completely waterproof.”** Click **Check against source**.
+Open **Poster**. Change the format or headline and export the PNG.
 
 Say:
 
-> “Now an unsafe request. The approved evidence supports water-resistant, not completely waterproof. RECAST blocks the wording and explains why.”
+> “The campaign system becomes editable work. Brand tokens, owned imagery, safe zones and native aspect ratios produce a real 1080-pixel master. Any production edit automatically reopens human approval.”
 
-Click **Use approved replacement**.
+## 1:20–2:05 — The winning technical moment
 
-Say:
-
-> “One click returns us to approved language, mapped to the controlled claim ID.”
-
-## 2:30–2:45 — Publish and learn
-
-Open **Launch**, publish the campaign page, then open **Radar**.
+Open **Revise**. Change the approved price from **₹2,499** to **₹2,299**.
 
 Say:
 
-> “Approval is a human boundary. Once approved, RECAST can host the campaign, prepare the channel queue and listen for the next useful signal. A claim-risk insight can be added back to the source and sent through the council again.”
+> “The client changed one fact. RECAST creates a new fact version, follows explicit dependency edges and updates exactly two blocks: the Reel end card and Carousel offer slide.”
 
-## 2:45–3:00 — Export and close
+Point to the preserved LinkedIn output and locked-asset integrity bar.
 
-Return to **Review** and click **Revision report** to download the Markdown audit trail.
+> “Unrelated copy and its approval do not move. This is semantic revision, not find-and-replace.”
+
+Enter **“Make it completely waterproof”** in Claim Guard, check it, then use the approved replacement.
+
+> “The evidence supports water-resistant—not completely waterproof—so RECAST blocks the claim and returns controlled wording.”
+
+## 2:05–2:40 — Human control and shareable launch
+
+Open **Review**, approve affected outputs and sign off creative quality. Continue to **Launch**.
 
 Say:
 
-> “The brief, revision history, and channel copy are portable. No API key is required. RECAST created one campaign source; I changed one fact; it updated every relevant asset and protected everything already approved.”
+> “Machine checks verify facts, claims, asset integrity, text fit and revision state. Tone and visual quality remain a human decision. Launch stays locked until all five release gates pass.”
 
-Close with:
+Publish, then open the campaign route.
 
-> “Change the campaign’s meaning. Not twenty individual files.”
+> “The approved campaign is now a portable share URL—not a screen that only works in the authoring session.”
+
+## 2:40–3:00 — Close on the moat
+
+Return to **Review** and export the revision report or return to **Agents** and export the channel pack.
+
+Say:
+
+> “RECAST starts with any brand brief, creates publish-ready native content, protects claims, survives change and leaves an audit trail. Change the campaign’s meaning—not twenty individual files.”
