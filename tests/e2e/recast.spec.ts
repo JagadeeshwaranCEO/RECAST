@@ -4,7 +4,7 @@ async function openStudio(page: Page) {
   await page.addInitScript(() => window.sessionStorage.setItem("recast-intro-seen", "true"));
   await page.goto("/");
   await expect(page.getByTestId("site-intro")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Your day changes. Your bag should keep up." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your day changes. Your style should keep up." })).toBeVisible();
 }
 
 test("cinematic intro welcomes the user and yields to the studio", async ({ page }) => {
@@ -13,7 +13,7 @@ test("cinematic intro welcomes the user and yields to the studio", async ({ page
   await expect(page.getByText("Scattered signals.")).toBeVisible();
   await page.getByTestId("skip-intro").click();
   await expect(page.getByTestId("site-intro")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Your day changes. Your bag should keep up." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your day changes. Your style should keep up." })).toBeVisible();
 });
 
 test("desktop workspace uses the available screen without horizontal overflow", async ({ page }) => {
@@ -141,4 +141,43 @@ test("studio switcher provides fast keyboard navigation", async ({ page }) => {
   await page.getByPlaceholder("Search campaign tools…").fill("intelligence");
   await page.getByTestId("command-intelligence").click();
   await expect(page.getByRole("heading", { name: "The model remembers why people cared." })).toBeVisible();
+});
+
+test("runtime exposes a healthy, hardened deterministic service", async ({ page, request }) => {
+  const health = await request.get("/api/health");
+  expect(health.ok()).toBe(true);
+  await expect(health.json()).resolves.toMatchObject({
+    status: "ok",
+    service: "recast-campaign-studio",
+    mode: "deterministic-demo",
+    storage: "browser-session",
+    checks: { application: "ready", campaignEngine: "ready" },
+  });
+  expect(health.headers()["cache-control"]).toContain("no-store");
+
+  const response = await page.goto("/");
+  const headers = response?.headers() ?? {};
+  expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(headers["permissions-policy"]).toContain("camera=()");
+  expect(headers["x-content-type-options"]).toBe("nosniff");
+  expect(headers["x-frame-options"]).toBe("DENY");
+});
+
+test("reset clears the session workspace and legacy browser data", async ({ page }) => {
+  await openStudio(page);
+  await page.getByTestId("nav-builder").click();
+  await page.getByTestId("builder-step-2").click();
+  await page.getByTestId("campaign-challenge").fill("Confidential launch idea for a shared demo device");
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Reset campaign and clear local workspace" }).click();
+  await page.getByTestId("nav-builder").click();
+  await page.getByTestId("builder-step-2").click();
+  await expect(page.getByTestId("campaign-challenge")).toHaveValue("Launch an adaptive menswear collection for people whose day changes without warning");
+
+  const storage = await page.evaluate(() => ({
+    legacy: localStorage.getItem("recast-brand-studio-v1"),
+    current: sessionStorage.getItem("recast-brand-studio-v2"),
+  }));
+  expect(storage).toEqual({ legacy: null, current: null });
 });

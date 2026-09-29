@@ -22,6 +22,9 @@ export type CampaignCase = {
   recastLift: string;
   sourceUrl: string;
   sourceLabel: string;
+  imageUrl: string;
+  imageAlt: string;
+  imageCredit: string;
   accent: string;
   deepDive?: boolean;
   recognitions?: Array<{
@@ -141,6 +144,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would map the emotional beat, product action and payoff as one protected story dependency—then adapt the same exchange for film, social and creator prompts without flattening it into a slogan.",
     sourceUrl: "https://www.coca-colacompany.com/about-us/history/cokes-enduring-legacy-of-inclusive-advertising",
     sourceLabel: "Coca-Cola history",
+    imageUrl: "/assets/campaigns/mean-joe.jpg",
+    imageAlt: "Mean Joe Greene and a young fan in the Coca-Cola tunnel commercial",
+    imageCredit: "Coca-Cola film archive",
     accent: "#d64a34",
     deepDive: true,
   },
@@ -158,6 +164,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would stress-test the enemy, cultural tension and claim evidence separately, keeping the provocation sharp while preventing unsupported superiority language in downstream assets.",
     sourceUrl: "https://www.apple.com/newsroom/2016/11/designed-by-apple-in-california-chronicles-20-years-of-apple-design/",
     sourceLabel: "Apple Newsroom",
+    imageUrl: "/assets/campaigns/apple-1984.jpg",
+    imageAlt: "Runner entering the stark auditorium in Apple's 1984 Macintosh launch film",
+    imageCredit: "Macintosh launch film archive",
     accent: "#232321",
   },
   {
@@ -174,6 +183,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would preserve the central imperative as a locked brand asset while giving each audience and channel a distinct reason to act.",
     sourceUrl: "https://about.nike.com/en/newsroom/releases/nike-reintroduces-just-do-it-to-todays-generation-with-why-do-it-campaign",
     sourceLabel: "Nike Newsroom",
+    imageUrl: "/assets/campaigns/just-do-it.jpg",
+    imageAlt: "Athlete in motion from Nike's modern Just Do It platform",
+    imageCredit: "Nike Newsroom",
     accent: "#dcff38",
   },
   {
@@ -190,6 +202,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would mine product-absence moments from the brief, rank them by tension and translate the best one into film, OOH and short-form hooks.",
     sourceUrl: "https://www.gotmilk.com/about-us/",
     sourceLabel: "got milk? / CMPB",
+    imageUrl: "/assets/campaigns/got-milk.jpg",
+    imageAlt: "Aaron Burr history-buff scene from the original got milk commercial",
+    imageCredit: "CMPB campaign film archive",
     accent: "#5b8ac7",
     deepDive: true,
   },
@@ -207,6 +222,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would encode the frame as a campaign grammar, letting teams generate local variants while validating that the final emotional reveal stays human—not transactional.",
     sourceUrl: "https://www.mastercard.com/news/perspectives/2022/priceless-mccann-mastercard/",
     sourceLabel: "Mastercard Newsroom",
+    imageUrl: "/assets/campaigns/priceless.jpg",
+    imageAlt: "Father and son at a baseball game from Mastercard's first Priceless story",
+    imageCredit: "Mastercard film archive",
     accent: "#ef9b38",
     deepDive: true,
   },
@@ -224,6 +242,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would connect representation rules, casting choices and copy claims to one approved purpose so later executions cannot quietly drift back to the convention the platform rejects.",
     sourceUrl: "https://www.unilever.com/brands/beauty-wellbeing/dove/",
     sourceLabel: "Unilever / Dove",
+    imageUrl: "/assets/campaigns/real-beauty.png",
+    imageAlt: "Women represented in Dove's Campaign for Real Beauty",
+    imageCredit: "Dove / Unilever",
     accent: "#6b90a6",
   },
   {
@@ -240,6 +261,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would hold the character rules, product facts and response boundaries in one source—making rapid replies safer without sanding off the wit.",
     sourceUrl: "https://www.wk.com/work/old-spice-smell-like-a-man-man/",
     sourceLabel: "Wieden+Kennedy",
+    imageUrl: "/assets/campaigns/old-spice.jpg",
+    imageAlt: "The Old Spice Man delivering the campaign's direct-to-camera monologue",
+    imageCredit: "Wieden+Kennedy",
     accent: "#c3523d",
     deepDive: true,
   },
@@ -257,6 +281,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would connect name libraries, cultural checks, pack rules and digital extensions—so personalization scales without losing local meaning or brand control.",
     sourceUrl: "https://www.coca-colacompany.com/about-us/history/how-a-campaign-got-its-start-down-under",
     sourceLabel: "Coca-Cola history",
+    imageUrl: "/assets/campaigns/share-a-coke.jpg",
+    imageAlt: "Personalized Coca-Cola bottles from the Share a Coke campaign",
+    imageCredit: "The Coca-Cola Company",
     accent: "#ed4438",
     deepDive: true,
   },
@@ -274,6 +301,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would preserve the research insight across films, prompts and community responses while flagging executions that slip back into stereotype.",
     sourceUrl: "https://origprod-cus-us.pg.com/pg-history/",
     sourceLabel: "P&G history",
+    imageUrl: "/assets/campaigns/like-a-girl.webp",
+    imageAlt: "Participant responding to the Like a Girl prompt on set",
+    imageCredit: "D&AD awards archive",
     accent: "#2c75c9",
     recognitions: [
       {
@@ -297,6 +327,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would model the ritual, handoff and cause proof as separate dependencies—helping variants spread while keeping donation language and impact claims accurate.",
     sourceUrl: "https://www.als.org/blog/als-ice-bucket-challenge-year-end-update-over-94-million-commitments-2014",
     sourceLabel: "The ALS Association",
+    imageUrl: "/assets/campaigns/ice-bucket.jpg",
+    imageAlt: "Participant completing the ALS Ice Bucket Challenge",
+    imageCredit: "Anthony Quintano / Wikimedia Commons, CC BY-SA 4.0",
     accent: "#68a9d4",
   },
   {
@@ -313,6 +346,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would define the data-to-story rules, disclosure language and channel variants once—then keep every personalized card on strategy as the product evolves.",
     sourceUrl: "https://newsroom.spotify.com/2024-12-04/10-years-spotify-wrapped/",
     sourceLabel: "Spotify Newsroom",
+    imageUrl: "/assets/campaigns/wrapped.jpg",
+    imageAlt: "Colorful personalized artwork from Spotify Wrapped",
+    imageCredit: "Spotify Newsroom",
     accent: "#b8ef3a",
     deepDive: true,
   },
@@ -330,6 +366,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would bind every version of the provocative visual to the precise approved ingredient claim, preventing a bold idea from becoming a broader promise the evidence cannot support.",
     sourceUrl: "https://time.com/5786464/burger-king-whopper/",
     sourceLabel: "TIME campaign report",
+    imageUrl: "/assets/campaigns/moldy-whopper.webp",
+    imageAlt: "Burger King's Moldy Whopper visual documenting the product's decay",
+    imageCredit: "Burger King campaign image via TIME",
     accent: "#79a85a",
     deepDive: true,
     recognitions: [
@@ -359,6 +398,9 @@ export const campaignCases: CampaignCase[] = [
     recastLift: "RECAST would retrieve the non-negotiable platform belief, map what has changed in culture and generate evolutions that can be traced back to both.",
     sourceUrl: "https://about.nike.com/en/newsroom/releases/nike-reintroduces-just-do-it-to-todays-generation-with-why-do-it-campaign",
     sourceLabel: "Nike Newsroom",
+    imageUrl: "/assets/campaigns/why-do-it.jpg",
+    imageAlt: "Young athlete in Nike's Why Do It campaign",
+    imageCredit: "Nike Newsroom",
     accent: "#bde34a",
   },
 ];

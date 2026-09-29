@@ -1,8 +1,25 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { z } from "zod";
 import { synthesizePatternIdeas, type PatternIdea } from "@/lib/campaign-intelligence";
+
+export const WORKSPACE_STORAGE_KEY = "recast-brand-studio-v2";
+export const LEGACY_WORKSPACE_STORAGE_KEY = "recast-brand-studio-v1";
+export const WORKSPACE_INPUT_LIMITS = {
+  brandName: 80,
+  productName: 120,
+  challenge: 500,
+  audience: 300,
+  objective: 300,
+  promise: 220,
+  proof: 800,
+  tone: 180,
+  market: 120,
+  collaboratorName: 80,
+  comment: 600,
+} as const;
 
 export type CampaignDraft = {
   brandName: string;
@@ -48,6 +65,30 @@ export type StudioComment = {
   createdAt: string;
 };
 
+const CampaignDraftPatchSchema = z.object({
+  brandName: z.string().max(WORKSPACE_INPUT_LIMITS.brandName).optional(),
+  productName: z.string().max(WORKSPACE_INPUT_LIMITS.productName).optional(),
+  challenge: z.string().max(WORKSPACE_INPUT_LIMITS.challenge).optional(),
+  audience: z.string().max(WORKSPACE_INPUT_LIMITS.audience).optional(),
+  objective: z.string().max(WORKSPACE_INPUT_LIMITS.objective).optional(),
+  promise: z.string().max(WORKSPACE_INPUT_LIMITS.promise).optional(),
+  proof: z.string().max(WORKSPACE_INPUT_LIMITS.proof).optional(),
+  tone: z.string().max(WORKSPACE_INPUT_LIMITS.tone).optional(),
+  market: z.string().max(WORKSPACE_INPUT_LIMITS.market).optional(),
+  deadline: z.string().max(10).optional(),
+  channels: z.array(z.string().min(1).max(40)).max(8).optional(),
+  primaryColor: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
+  accentColor: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
+}).strict();
+
+const TeamRoleSchema = z.enum(["Brand lead", "Strategist", "Copywriter", "Designer", "Reviewer"]);
+const WorkStatusSchema = z.enum(["Brief", "Making", "Review", "Approved"]);
+const CollaboratorInputSchema = z.object({
+  name: z.string().trim().min(1).max(WORKSPACE_INPUT_LIMITS.collaboratorName),
+  role: TeamRoleSchema,
+});
+const CommentInputSchema = z.string().trim().min(1).max(WORKSPACE_INPUT_LIMITS.comment);
+
 type WorkspaceState = {
   draft: CampaignDraft;
   ideas: PatternIdea[];
@@ -68,12 +109,12 @@ type WorkspaceState = {
 
 const initialDraft: CampaignDraft = {
   brandName: "Stride",
-  productName: "Modular Backpack",
-  challenge: "Launch a modular backpack for people whose day changes without warning",
+  productName: "New Formal Collection",
+  challenge: "Launch an adaptive menswear collection for people whose day changes without warning",
   audience: "Hybrid workers and urban creators, 22–38",
   objective: "Build launch awareness and waitlist intent",
-  promise: "One carry system that changes with the day",
-  proof: "18L modular system · water-resistant shell · launch price ₹2,499",
+  promise: "One point of view that changes with the day",
+  proof: "Three modular looks · water-resistant outer layer · launch price ₹2,499",
   tone: "Useful, observant, quietly confident",
   market: "India · English-first",
   deadline: "2026-10-30",
@@ -131,13 +172,17 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       members: initialMembers,
       tasks: initialTasks,
       comments: initialComments,
-      updateDraft: (patch) => set((state) => ({ draft: { ...state.draft, ...patch } })),
+      updateDraft: (patch) => {
+        const parsed = CampaignDraftPatchSchema.safeParse(patch);
+        if (!parsed.success) return;
+        set((state) => ({ draft: { ...state.draft, ...parsed.data } }));
+      },
       toggleChannel: (channel) => set((state) => ({
         draft: {
           ...state.draft,
           channels: state.draft.channels.includes(channel)
             ? state.draft.channels.filter((item) => item !== channel)
-            : [...state.draft.channels, channel],
+            : state.draft.channels.length < 8 ? [...state.draft.channels, channel] : state.draft.channels,
         },
       })),
       generateIdeas: () => {
@@ -145,20 +190,32 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         set({ ideas, selectedIdeaIndex: 0, generatedAt: new Date().toISOString() });
       },
       selectIdea: (index) => set((state) => ({ selectedIdeaIndex: Math.min(Math.max(index, 0), state.ideas.length - 1) })),
-      addMember: (name, role) => set((state) => ({
-        members: [...state.members, { id: `member-${Date.now()}`, name: name.trim(), initials: initialsFor(name), role, presence: "online" }],
-      })),
-      moveTask: (id, status) => set((state) => ({ tasks: state.tasks.map((task) => task.id === id ? { ...task, status } : task) })),
-      addComment: (body) => set((state) => ({
-        comments: [...state.comments, {
+      addMember: (name, role) => {
+        const parsed = CollaboratorInputSchema.safeParse({ name, role });
+        if (!parsed.success) return;
+        set((state) => ({
+          members: state.members.length >= 24 ? state.members : [...state.members, { id: `member-${Date.now()}`, name: parsed.data.name, initials: initialsFor(parsed.data.name), role: parsed.data.role, presence: "online" }],
+        }));
+      },
+      moveTask: (id, status) => {
+        const parsed = WorkStatusSchema.safeParse(status);
+        if (!parsed.success) return;
+        set((state) => ({ tasks: state.tasks.map((task) => task.id === id ? { ...task, status: parsed.data } : task) }));
+      },
+      addComment: (body) => {
+        const parsed = CommentInputSchema.safeParse(body);
+        if (!parsed.success) return;
+        set((state) => ({
+          comments: state.comments.length >= 100 ? state.comments : [...state.comments, {
           id: `comment-${Date.now()}`,
           author: "Jagadeeshwaran E",
           initials: "JE",
-          body: body.trim(),
+          body: parsed.data,
           context: "Campaign room",
           createdAt: new Date().toISOString(),
         }],
-      })),
+        }));
+      },
       resetWorkspace: () => set({
         draft: initialDraft,
         ideas: initialIdeas,
@@ -169,6 +226,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         comments: initialComments,
       }),
     }),
-    { name: "recast-brand-studio-v1" },
+    {
+      name: WORKSPACE_STORAGE_KEY,
+      version: 2,
+      storage: createJSONStorage(() => sessionStorage),
+    },
   ),
 );

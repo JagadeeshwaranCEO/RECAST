@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- local campaign assets are pre-sized; vinext image optimization is unavailable in the worker preview. */
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -40,7 +42,14 @@ import { campaignCases, campaignDisciplines, getEvidenceProfile, researchArchive
 import { checkClaim, exportCampaign, UnsupportedClaimError, validateCampaign } from "@/lib/revision-engine";
 import type { Asset, Campaign, ValidationResult } from "@/lib/models";
 import { type StudioView, useCampaignStore } from "@/store/campaign-store";
-import { type TeamRole, type WorkStatus, useWorkspaceStore } from "@/store/workspace-store";
+import {
+  LEGACY_WORKSPACE_STORAGE_KEY,
+  WORKSPACE_INPUT_LIMITS,
+  WORKSPACE_STORAGE_KEY,
+  type TeamRole,
+  type WorkStatus,
+  useWorkspaceStore,
+} from "@/store/workspace-store";
 
 const navItems: { id: StudioView; label: string; icon: typeof Home; short: string }[] = [
   { id: "home", label: "Campaign home", icon: Home, short: "Home" },
@@ -55,7 +64,7 @@ const navItems: { id: StudioView; label: string; icon: typeof Home; short: strin
 ];
 
 const viewTitles: Record<StudioView, { eyebrow: string; title: string; note: string }> = {
-  home: { eyebrow: "Campaign 01 · Active", title: "Stride Modular Backpack Launch", note: "One campaign source · Three connected outputs" },
+  home: { eyebrow: "Campaign 01 · Active", title: "Stride / The New Formal", note: "One campaign source · Three connected outputs" },
   builder: { eyebrow: "New campaign · Guided build", title: "Campaign builder", note: "Brand, brief, strategy and delivery" },
   intelligence: { eyebrow: "Pattern library · R2", title: "Campaign intelligence", note: "Five research lenses · Evidence kept separate" },
   team: { eyebrow: "Studio room · 4 collaborators", title: "Team workspace", note: "Roles, feedback and approval flow" },
@@ -87,27 +96,28 @@ function StatusPill({ status }: { status: string }) {
   return <span className={cx("status-pill", `status-${status}`)}><span className="status-dot" />{label}</span>;
 }
 
-function BackpackArt({ scene = "desk", compact = false }: { scene?: "desk" | "transit" | "weekend"; compact?: boolean }) {
+function FashionCampaignArt({ scene = "street", compact = false }: { scene?: "street" | "studio" | "runway"; compact?: boolean }) {
+  const sceneCopy = {
+    street: { word: "STREET", caption: "08:40 / street formalism", alt: "Model in navy tailoring inside an aged brass and green elevator" },
+    studio: { word: "FORM", caption: "14:15 / sculpted attitude", alt: "Model in an emerald double-breasted suit against a lacquer-red studio backdrop" },
+    runway: { word: "MOVE", caption: "20:10 / new runway", alt: "Model walking a runway in plaid tailoring and wide-leg denim" },
+  }[scene];
   return (
-    <div className={cx("scene-art", `scene-${scene}`, compact && "scene-compact")} aria-label={`Stride backpack in ${scene} setting`} role="img">
-      <div className="scene-word">{scene === "desk" ? "WORK" : scene === "transit" ? "MOVE" : "ROAM"}</div>
-      <div className="scene-line scene-line-one" />
-      <div className="scene-line scene-line-two" />
-      <div className="bag-shadow" />
-      <div className="bag-wrap">
-        <div className="bag-handle" />
-        <div className="bag-body">
-          <div className="bag-brand">STRIDE</div>
-          <div className="bag-seam" />
-          <div className="bag-pocket"><span /></div>
-          <div className="bag-tab" />
-        </div>
-        <div className="bag-strap bag-strap-left" />
-        <div className="bag-strap bag-strap-right" />
-      </div>
-      <div className="scene-caption">{scene === "desk" ? "09:10 / focused" : scene === "transit" ? "17:42 / in motion" : "07:20 / off-grid"}</div>
-    </div>
+    <figure className={cx("scene-art", `scene-${scene}`, compact && "scene-compact")}>
+      <img className="scene-photo" src="/assets/stride-fashion-editorial-v2.jpg" alt={sceneCopy.alt} width={1536} height={1024} loading={compact ? "lazy" : "eager"} decoding="async" fetchPriority={compact ? "auto" : "high"} />
+      <div className="scene-shade" aria-hidden="true" />
+      <div className="scene-word" aria-hidden="true">{sceneCopy.word}</div>
+      <figcaption className="scene-caption">{sceneCopy.caption}</figcaption>
+    </figure>
   );
+}
+
+function CampaignThumbnail({ imageUrl, imageAlt }: { imageUrl: string; imageAlt: string }) {
+  return <span className="campaign-thumbnail"><img src={imageUrl} alt={imageAlt} loading="lazy" decoding="async" /></span>;
+}
+
+function CampaignImageCredit({ credit }: { credit: string }) {
+  return <span className="campaign-image-credit">Image: {credit}</span>;
 }
 
 function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -145,7 +155,16 @@ function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
 
 function AppHeader({ onMenu, onCommand }: { onMenu: () => void; onCommand: () => void }) {
   const { campaign, view, resetDemo } = useCampaignStore();
+  const resetWorkspace = useWorkspaceStore((state) => state.resetWorkspace);
   const meta = viewTitles[view];
+  const resetAllLocalData = () => {
+    if (!window.confirm("Reset the campaign and clear this tab’s locally saved workspace?")) return;
+    resetDemo();
+    resetWorkspace();
+    useWorkspaceStore.persist.clearStorage();
+    window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
+    window.sessionStorage.removeItem(WORKSPACE_STORAGE_KEY);
+  };
   return (
     <header className="app-header">
       <button className="mobile-menu" onClick={onMenu} aria-label="Open navigation"><Menu size={20} /></button>
@@ -157,7 +176,7 @@ function AppHeader({ onMenu, onCommand }: { onMenu: () => void; onCommand: () =>
         <span className="source-version"><CircleDot size={13} /> Source v{campaign.version}</span>
         <span className="header-note">{meta.note}</span>
         <button className="header-command" onClick={onCommand} aria-label="Open studio switcher"><Command size={14} /><span>Switch</span><kbd>⌘K</kbd></button>
-        <button className="icon-button" onClick={resetDemo} aria-label="Reset demo campaign" title="Reset demo"><RotateCcw size={17} /></button>
+        <button className="icon-button" onClick={resetAllLocalData} aria-label="Reset campaign and clear local workspace" title="Reset local demo data"><RotateCcw size={17} /></button>
         <span className="avatar">JE</span>
       </div>
     </header>
@@ -168,6 +187,8 @@ function StudioSwitcher({ open, onClose }: { open: boolean; onClose: () => void 
   const view = useCampaignStore((state) => state.view);
   const setView = useCampaignStore((state) => state.setView);
   const [query, setQuery] = useState("");
+  const dialogRef = useRef<HTMLElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const matches = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return navItems;
@@ -176,16 +197,39 @@ function StudioSwitcher({ open, onClose }: { open: boolean; onClose: () => void 
 
   useEffect(() => {
     if (!open) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.classList.add("command-active");
-    return () => document.body.classList.remove("command-active");
+    const dialog = dialogRef.current;
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = [...dialog.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), [href], [tabindex]:not([tabindex='-1'])")]
+        .filter((element) => !element.hasAttribute("hidden"));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    dialog?.addEventListener("keydown", trapFocus);
+    return () => {
+      dialog?.removeEventListener("keydown", trapFocus);
+      document.body.classList.remove("command-active");
+      previousFocusRef.current?.focus();
+    };
   }, [open]);
 
   if (!open) return null;
   return (
     <div className="command-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="command-menu" role="dialog" aria-modal="true" aria-labelledby="command-title" data-testid="studio-switcher">
+      <section ref={dialogRef} className="command-menu" role="dialog" aria-modal="true" aria-labelledby="command-title" aria-describedby="command-description" data-testid="studio-switcher">
         <div className="command-head"><div><span>RECAST / NAVIGATE</span><h2 id="command-title">Where do you want to work?</h2></div><button onClick={onClose} aria-label="Close studio switcher"><X size={17} /></button></div>
-        <label className="command-search"><Search size={17} /><span className="sr-only">Search studio destinations</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search campaign tools…" /></label>
+        <p className="sr-only" id="command-description">Search and open any RECAST workspace. Press Escape to close.</p>
+        <label className="command-search"><Search size={17} /><span className="sr-only">Search studio destinations</span><input autoFocus maxLength={80} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search campaign tools…" /></label>
         <div className="command-results">
           {matches.map((item, index) => {
             const Icon = item.icon;
@@ -246,7 +290,9 @@ function CampaignMemoryScroll({ onOpen }: { onOpen: () => void }) {
         <div className="memory-collage" aria-hidden="true">
           {memories.map((campaign, index) => (
             <article className={`memory-card memory-card-${index + 1}`} key={campaign.id} style={{ "--memory-accent": campaign.accent } as React.CSSProperties}>
-              <span>{campaign.year}</span>
+              <img src={campaign.imageUrl} alt="" loading="lazy" decoding="async" />
+              <div className="memory-card-shade" />
+              <span>{campaign.year} · {campaign.brand}</span>
               <strong>{campaign.name}</strong>
               <small>{campaign.mechanic}</small>
             </article>
@@ -274,8 +320,8 @@ function CampaignHome() {
       <section className="campaign-intro">
         <div>
           <div className="micro-label">LIVE CAMPAIGN / STRIDE 01</div>
-          <h1>Your day changes.<br /><em>Your bag should keep up.</em></h1>
-          <p>One modular carry system, told differently across every context — and governed by the same approved source.</p>
+          <h1>Your day changes.<br /><em>Your style should keep up.</em></h1>
+          <p>One expressive menswear collection, moving from street to studio to runway — governed by the same approved campaign source.</p>
         </div>
         <div className="intro-actions">
           <button className="button button-primary" onClick={() => setView("builder")}>
@@ -290,13 +336,13 @@ function CampaignHome() {
 
       <section className="timeline-shell" aria-label="Campaign visual timeline">
         <div className="timeline-heading">
-          <span>Campaign film · 12 sec</span>
+          <span>Campaign editorial · 12 sec</span>
           <div><span className="tiny-live" /> Concept locked</div>
         </div>
         <div className="scene-grid">
-          <div className="scene-item"><BackpackArt scene="desk" /><div className="scene-meta"><span>01</span><strong>Desk</strong><small>Built for focus</small></div></div>
-          <div className="scene-item"><BackpackArt scene="transit" /><div className="scene-meta"><span>02</span><strong>Transit</strong><small>Modular in motion</small></div></div>
-          <div className="scene-item"><BackpackArt scene="weekend" /><div className="scene-meta"><span>03</span><strong>Weekend</strong><small>18L, off the clock</small></div></div>
+          <div className="scene-item"><FashionCampaignArt scene="street" /><div className="scene-meta"><span>01</span><strong>Street</strong><small>Quiet confidence</small></div></div>
+          <div className="scene-item"><FashionCampaignArt scene="studio" /><div className="scene-meta"><span>02</span><strong>Studio</strong><small>Sculpted attitude</small></div></div>
+          <div className="scene-item"><FashionCampaignArt scene="runway" /><div className="scene-meta"><span>03</span><strong>Runway</strong><small>Movement, tailored</small></div></div>
         </div>
         <div className="timeline-track"><i /><i /><i /></div>
       </section>
@@ -332,7 +378,7 @@ function CampaignIntelligence() {
   const [discipline, setDiscipline] = useState<(typeof campaignDisciplines)[number]>("All");
   const [activeId, setActiveId] = useState("mean-joe");
   const [activeArchiveId, setActiveArchiveId] = useState(researchArchives[0].id);
-  const [challenge, setChallenge] = useState("Launch a modular backpack for people whose day changes without warning");
+  const [challenge, setChallenge] = useState("Launch an adaptive menswear collection for people whose day changes without warning");
   const [ideas, setIdeas] = useState(() => synthesizePatternIdeas(challenge));
   const active = campaignCases.find((item) => item.id === activeId) ?? campaignCases[0];
   const activeArchive = researchArchives.find((item) => item.id === activeArchiveId) ?? researchArchives[0];
@@ -417,7 +463,12 @@ function CampaignIntelligence() {
           {filtered.map((campaign, index) => (
             <article className={cx("archive-card", active.id === campaign.id && "archive-card-active")} key={campaign.id} style={{ "--case-accent": campaign.accent } as React.CSSProperties}>
               <button className="archive-card-main" onClick={() => setActiveId(campaign.id)} aria-label={`Open ${campaign.name} case study`}>
-                <div className="archive-poster"><span>{campaign.year}</span><strong>{campaign.name}</strong><small>{campaign.brand}</small><i>{String(index + 1).padStart(2, "0")}</i>{campaign.recognitions?.length ? <b>{campaign.recognitions.length}× award verified</b> : null}</div>
+                <div className="archive-poster">
+                  <CampaignThumbnail imageUrl={campaign.imageUrl} imageAlt={campaign.imageAlt} />
+                  <div className="archive-poster-shade" />
+                  <span>{campaign.year}</span><strong>{campaign.name}</strong><small>{campaign.brand}</small><i>{String(index + 1).padStart(2, "0")}</i>{campaign.recognitions?.length ? <b>{campaign.recognitions.length}× award verified</b> : null}
+                  <CampaignImageCredit credit={campaign.imageCredit} />
+                </div>
                 <div className="archive-copy"><span>{campaign.discipline}</span><h3>{campaign.hook}</h3><p>{campaign.mechanic}</p></div>
               </button>
               <a href={campaign.sourceUrl} target="_blank" rel="noreferrer">{campaign.sourceLabel}<ExternalLink size={12} /></a>
@@ -457,7 +508,7 @@ function CampaignIntelligence() {
           <h2>Do not copy the campaign.<br /><em>Transfer the intelligence.</em></h2>
           <p>Describe a campaign challenge. RECAST retrieves useful mechanics, rewrites them around the new truth and keeps the historical inspiration visible.</p>
           <label htmlFor="pattern-brief">Campaign challenge</label>
-          <textarea id="pattern-brief" value={challenge} onChange={(event) => setChallenge(event.target.value)} />
+          <textarea id="pattern-brief" maxLength={WORKSPACE_INPUT_LIMITS.challenge} value={challenge} onChange={(event) => setChallenge(event.target.value)} />
           <button className="button button-primary" onClick={() => setIdeas(synthesizePatternIdeas(challenge))}><Sparkles size={16} /> Synthesize three directions</button>
         </div>
         <div className="pattern-results">
@@ -551,10 +602,10 @@ function CampaignBuilder() {
             <div className="builder-form page-enter">
               <div className="form-explainer"><strong>Teach RECAST the brand before asking it for ideas.</strong><p>These inputs become reusable guardrails for every campaign, output and revision.</p></div>
               <div className="field-grid">
-                <label><span>Brand name</span><input value={draft.brandName} onChange={(event) => updateDraft({ brandName: event.target.value })} /></label>
-                <label><span>Product or offer</span><input value={draft.productName} onChange={(event) => updateDraft({ productName: event.target.value })} /></label>
-                <label className="field-wide"><span>Voice and tone</span><input value={draft.tone} onChange={(event) => updateDraft({ tone: event.target.value })} /></label>
-                <label><span>Market / language</span><input value={draft.market} onChange={(event) => updateDraft({ market: event.target.value })} /></label>
+                <label><span>Brand name</span><input maxLength={WORKSPACE_INPUT_LIMITS.brandName} value={draft.brandName} onChange={(event) => updateDraft({ brandName: event.target.value })} /></label>
+                <label><span>Product or offer</span><input maxLength={WORKSPACE_INPUT_LIMITS.productName} value={draft.productName} onChange={(event) => updateDraft({ productName: event.target.value })} /></label>
+                <label className="field-wide"><span>Voice and tone</span><input maxLength={WORKSPACE_INPUT_LIMITS.tone} value={draft.tone} onChange={(event) => updateDraft({ tone: event.target.value })} /></label>
+                <label><span>Market / language</span><input maxLength={WORKSPACE_INPUT_LIMITS.market} value={draft.market} onChange={(event) => updateDraft({ market: event.target.value })} /></label>
                 <div className="brand-colours"><span>Brand colours</span><label><input type="color" value={draft.primaryColor} onChange={(event) => updateDraft({ primaryColor: event.target.value })} /><strong>{draft.primaryColor}</strong></label><label><input type="color" value={draft.accentColor} onChange={(event) => updateDraft({ accentColor: event.target.value })} /><strong>{draft.accentColor}</strong></label></div>
               </div>
               <div className="brand-preview" style={{ "--brand-primary": draft.primaryColor, "--brand-accent": draft.accentColor } as React.CSSProperties}><span>{draft.brandName || "YOUR BRAND"}</span><strong>{draft.productName || "Campaign system"}</strong><small>{draft.tone || "Define the voice"}</small><i /></div>
@@ -565,11 +616,11 @@ function CampaignBuilder() {
             <div className="builder-form page-enter">
               <div className="form-explainer"><strong>A sharp brief gives creativity something to push against.</strong><p>Separate the human problem, business objective and approved proof so the model knows where it can invent—and where it cannot.</p></div>
               <div className="field-grid brief-fields">
-                <label className="field-wide"><span>Campaign challenge</span><textarea data-testid="campaign-challenge" value={draft.challenge} onChange={(event) => updateDraft({ challenge: event.target.value })} /></label>
-                <label><span>Audience</span><textarea value={draft.audience} onChange={(event) => updateDraft({ audience: event.target.value })} /></label>
-                <label><span>Business objective</span><textarea value={draft.objective} onChange={(event) => updateDraft({ objective: event.target.value })} /></label>
-                <label className="field-wide"><span>Single-minded promise</span><input value={draft.promise} onChange={(event) => updateDraft({ promise: event.target.value })} /></label>
-                <label className="field-wide"><span>Approved proof / claims</span><textarea value={draft.proof} onChange={(event) => updateDraft({ proof: event.target.value })} /></label>
+                <label className="field-wide"><span>Campaign challenge</span><textarea maxLength={WORKSPACE_INPUT_LIMITS.challenge} data-testid="campaign-challenge" value={draft.challenge} onChange={(event) => updateDraft({ challenge: event.target.value })} /></label>
+                <label><span>Audience</span><textarea maxLength={WORKSPACE_INPUT_LIMITS.audience} value={draft.audience} onChange={(event) => updateDraft({ audience: event.target.value })} /></label>
+                <label><span>Business objective</span><textarea maxLength={WORKSPACE_INPUT_LIMITS.objective} value={draft.objective} onChange={(event) => updateDraft({ objective: event.target.value })} /></label>
+                <label className="field-wide"><span>Single-minded promise</span><input maxLength={WORKSPACE_INPUT_LIMITS.promise} value={draft.promise} onChange={(event) => updateDraft({ promise: event.target.value })} /></label>
+                <label className="field-wide"><span>Approved proof / claims</span><textarea maxLength={WORKSPACE_INPUT_LIMITS.proof} value={draft.proof} onChange={(event) => updateDraft({ proof: event.target.value })} /></label>
                 <label><span>Launch deadline</span><input type="date" value={draft.deadline} onChange={(event) => updateDraft({ deadline: event.target.value })} /></label>
               </div>
             </div>
@@ -668,7 +719,7 @@ function TeamStudio() {
           <section className="collaborators-panel">
             <div className="panel-heading"><div><span>People</span><strong>{members.length} collaborators</strong></div><Users size={17} /></div>
             <div className="member-list">{members.map((member) => <article key={member.id}><span>{member.initials}<i className={member.presence === "online" ? "member-online" : ""} /></span><div><strong>{member.name}</strong><small>{member.role}</small></div></article>)}</div>
-            <div className="member-form"><input placeholder="Collaborator name" value={memberName} onChange={(event) => setMemberName(event.target.value)} /><select value={memberRole} onChange={(event) => setMemberRole(event.target.value as TeamRole)}>{teamRoles.map((role) => <option key={role}>{role}</option>)}</select><button onClick={submitMember} disabled={!memberName.trim()} aria-label="Add collaborator"><UserPlus size={15} /></button></div>
+            <div className="member-form"><input aria-label="Collaborator name" maxLength={WORKSPACE_INPUT_LIMITS.collaboratorName} placeholder="Collaborator name" value={memberName} onChange={(event) => setMemberName(event.target.value)} /><select aria-label="Collaborator role" value={memberRole} onChange={(event) => setMemberRole(event.target.value as TeamRole)}>{teamRoles.map((role) => <option key={role}>{role}</option>)}</select><button onClick={submitMember} disabled={!memberName.trim()} aria-label="Add collaborator"><UserPlus size={15} /></button></div>
           </section>
 
           <section className="approval-gates">
@@ -684,7 +735,7 @@ function TeamStudio() {
         <div className="decision-intro"><span className="micro-label">DECISION THREAD</span><h2>Feedback stays attached<br />to the campaign.</h2><p>Comments carry context, owners and timing so the final approval does not depend on finding the right message in a different app.</p></div>
         <div className="comment-panel">
           <div className="comment-list">{comments.slice(-5).map((item) => <article key={item.id}><span>{item.initials}</span><div><div><strong>{item.author}</strong><small>{item.context} · {new Date(item.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</small></div><p>{item.body}</p></div></article>)}</div>
-          <div className="comment-compose"><MessageSquare size={17} /><input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Add a decision, question or feedback…" onKeyDown={(event) => { if (event.key === "Enter") submitComment(); }} /><button onClick={submitComment} disabled={!comment.trim()}>Post</button></div>
+          <div className="comment-compose"><MessageSquare size={17} /><input aria-label="Campaign comment" maxLength={WORKSPACE_INPUT_LIMITS.comment} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Add a decision, question or feedback…" onKeyDown={(event) => { if (event.key === "Enter") submitComment(); }} /><button onClick={submitComment} disabled={!comment.trim()}>Post</button></div>
         </div>
       </section>
     </div>
@@ -760,7 +811,7 @@ function ConceptSelection() {
         {campaign.concepts.map((concept, index) => (
           <button key={concept.id} className={cx("concept-card", concept.selected && "concept-selected")} onClick={() => selectConcept(concept.id)} aria-pressed={concept.selected}>
             <div className="concept-top"><span>Direction 0{index + 1}</span>{concept.selected ? <span className="selected-mark"><Check size={14} /> Selected</span> : <span>Select direction</span>}</div>
-            <div className={`concept-art concept-art-${index + 1}`}><BackpackArt scene={index === 0 ? "transit" : "desk"} compact /><span className="concept-number">0{index + 1}</span></div>
+            <div className={`concept-art concept-art-${index + 1}`}><FashionCampaignArt scene={index === 0 ? "runway" : "street"} compact /><span className="concept-number">0{index + 1}</span></div>
             <h2>{concept.title}</h2>
             <p>{concept.promise}</p>
             <dl>
@@ -786,19 +837,19 @@ function AssetPreview({ asset, campaign }: { asset: Asset; campaign: Campaign })
   if (asset.id === "asset.reel") {
     return (
       <div className="reel-preview">
-        <div className="phone-stage"><BackpackArt scene="transit" compact /><span className="reel-time">00:07 / 00:12</span></div>
+        <div className="phone-stage"><FashionCampaignArt scene="studio" compact /><span className="reel-time">00:07 / 00:12</span></div>
         <div className="scene-script">{asset.blocks.filter((block) => block.type !== "image").map((block, index) => <div key={block.id}><span>0{index + 1}</span><p>{block.content}</p><DependencyChips campaign={campaign} blockId={block.id} /></div>)}</div>
       </div>
     );
   }
   if (asset.id === "asset.carousel") {
-    return <div className="carousel-preview">{asset.blocks.filter((block) => block.type === "copy").map((block, index) => <div className={`carousel-slide slide-${index + 1}`} key={block.id}><span>0{index + 1}</span>{index > 0 && <div className="mini-bag"><BackpackArt scene={index === 1 ? "desk" : index === 2 ? "weekend" : "transit"} compact /></div>}<strong>{block.content}</strong><DependencyChips campaign={campaign} blockId={block.id} /></div>)}</div>;
+    return <div className="carousel-preview">{asset.blocks.filter((block) => block.type === "copy").map((block, index) => <div className={`carousel-slide slide-${index + 1}`} key={block.id}><span>0{index + 1}</span>{index > 0 && <div className="mini-campaign-art"><FashionCampaignArt scene={index === 1 ? "street" : index === 2 ? "runway" : "studio"} compact /></div>}<strong>{block.content}</strong><DependencyChips campaign={campaign} blockId={block.id} /></div>)}</div>;
   }
   return (
     <div className="linkedin-preview">
       <div className="linkedin-profile"><span>S</span><div><strong>Stride Design</strong><small>Product company · Just now</small></div></div>
       {asset.blocks.filter((block) => block.type === "copy").map((block, index) => <div key={block.id} className="linkedin-block"><p className={index === 0 ? "linkedin-hook" : ""}>{block.content}</p><DependencyChips campaign={campaign} blockId={block.id} /></div>)}
-      <div className="linkedin-visual"><BackpackArt scene="desk" compact /><span>DESIGNED FOR<br />THE DAY BETWEEN<br />THE PLANS.</span></div>
+      <div className="linkedin-visual"><FashionCampaignArt scene="street" compact /><span>DESIGNED FOR<br />THE DAY BETWEEN<br />THE PLANS.</span></div>
     </div>
   );
 }
@@ -808,16 +859,28 @@ function CampaignCanvas() {
   const [activeAsset, setActiveAsset] = useState(campaign.assets[0].id);
   const asset = campaign.assets.find((candidate) => candidate.id === activeAsset) ?? campaign.assets[0];
   const approval = campaign.approvals.find((item) => item.assetId === asset.id);
+  const onTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex = event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? campaign.assets.length - 1
+        : (index + (event.key === "ArrowRight" ? 1 : -1) + campaign.assets.length) % campaign.assets.length;
+    const nextAsset = campaign.assets[nextIndex];
+    setActiveAsset(nextAsset.id);
+    window.requestAnimationFrame(() => document.getElementById(`asset-tab-${nextAsset.id}`)?.focus());
+  };
   return (
     <div className="view page-enter canvas-view">
       <div className="canvas-toolbar">
         <div className="asset-tabs" role="tablist" aria-label="Campaign outputs">
-          {campaign.assets.map((item) => <button key={item.id} className={cx(activeAsset === item.id && "asset-tab-active")} onClick={() => setActiveAsset(item.id)} role="tab" aria-selected={activeAsset === item.id}><span>{item.platform}</span>{item.title}<i /></button>)}
+          {campaign.assets.map((item, index) => <button key={item.id} id={`asset-tab-${item.id}`} className={cx(activeAsset === item.id && "asset-tab-active")} onClick={() => setActiveAsset(item.id)} onKeyDown={(event) => onTabKeyDown(event, index)} role="tab" aria-selected={activeAsset === item.id} aria-controls={`asset-panel-${item.id}`} tabIndex={activeAsset === item.id ? 0 : -1}><span>{item.platform}</span>{item.title}<i /></button>)}
         </div>
         <button className="button button-primary button-small" onClick={() => setView("revision")}><PenLine size={15} /> Revise source</button>
       </div>
       <div className="canvas-layout">
-        <section className="asset-stage">
+        <section className="asset-stage" id={`asset-panel-${asset.id}`} role="tabpanel" aria-labelledby={`asset-tab-${asset.id}`} tabIndex={0}>
           <div className="asset-stage-header"><div><span>{asset.format}</span><h2>{asset.title}</h2><p>{asset.role}</p></div><StatusPill status={approval?.status ?? "needs_review"} /></div>
           <AssetPreview asset={asset} campaign={campaign} />
         </section>
@@ -876,7 +939,7 @@ function RevisionStudio() {
           <div className="revision-control-card">
             <div className="control-label"><span>01 · Pricing fact</span><code>{currentPrice?.id}</code></div>
             <label htmlFor="price-input">Approved launch price</label>
-            <div className="price-control"><input id="price-input" data-testid="price-input" value={price} onChange={(event) => setPrice(event.target.value)} /><button data-testid="apply-price" onClick={() => revisePrice(price)} disabled={price === currentPrice?.value}>Apply to campaign <ArrowRight size={16} /></button></div>
+            <div className="price-control"><input id="price-input" inputMode="text" maxLength={32} data-testid="price-input" value={price} onChange={(event) => setPrice(event.target.value)} /><button data-testid="apply-price" onClick={() => revisePrice(price)} disabled={!price.trim() || price === currentPrice?.value}>Apply to campaign <ArrowRight size={16} /></button></div>
             <div className="impact-preview"><GitBranch size={15} /><span>{priceEdges.length || 2} connected blocks will update</span><span>1 output preserved</span></div>
           </div>
 
@@ -888,7 +951,7 @@ function RevisionStudio() {
           <div className={cx("claim-guard", claimState === "unsupported" && "guard-warning", claimState === "approved" && "guard-approved")}>
             <div className="control-label"><span>03 · Claim guard</span><ShieldCheck size={16} /></div>
             <label htmlFor="claim-input">Requested campaign wording</label>
-            <textarea id="claim-input" data-testid="claim-input" value={claim} onChange={(event) => { setClaim(event.target.value); setClaimState("idle"); }} />
+            <textarea id="claim-input" maxLength={300} data-testid="claim-input" value={claim} onChange={(event) => { setClaim(event.target.value); setClaimState("idle"); }} />
             <button className="button button-dark" onClick={onCheckClaim} data-testid="check-claim">Check against source</button>
             {claimState !== "idle" && <div className="claim-result" data-testid={claimState === "unsupported" ? "claim-warning" : "claim-approved"}>{claimState === "unsupported" ? <CircleAlert size={19} /> : <CheckCircle2 size={19} />}<div><strong>{claimState === "unsupported" ? "Unsupported claim" : "Approved wording"}</strong><p>{claimMessage}</p>{claimState === "unsupported" && <button data-testid="use-approved" onClick={() => { setClaim("Make it water-resistant for changing weather"); setClaimState("approved"); setClaimMessage("Mapped to claim.water-resistant.v1. Approved replacement is ready."); }}>Use approved replacement <ArrowRight size={14} /></button>}</div></div>}
           </div>
@@ -961,7 +1024,7 @@ function ReviewPublish() {
           <div className="approval-list">
             {campaign.assets.map((asset) => {
               const approval = campaign.approvals.find((item) => item.assetId === asset.id)!;
-              return <article key={asset.id}><div className="approval-art"><BackpackArt scene={asset.id === "asset.reel" ? "transit" : asset.id === "asset.carousel" ? "weekend" : "desk"} compact /></div><div><small>{asset.platform} · {asset.format}</small><strong>{asset.title}</strong><span>{approval.status === "approved" ? `Approved by ${approval.reviewer}` : "Source changed · previous approval is stale"}</span></div>{approval.status === "stale" ? <button onClick={() => approveAsset(asset.id)}>Approve <Check size={14} /></button> : <StatusPill status={latest?.preservedAssetIds.includes(asset.id) ? "preserved" : "ready"} />}</article>;
+              return <article key={asset.id}><div className="approval-art"><FashionCampaignArt scene={asset.id === "asset.reel" ? "studio" : asset.id === "asset.carousel" ? "runway" : "street"} compact /></div><div><small>{asset.platform} · {asset.format}</small><strong>{asset.title}</strong><span>{approval.status === "approved" ? `Approved by ${approval.reviewer}` : "Source changed · previous approval is stale"}</span></div>{approval.status === "stale" ? <button onClick={() => approveAsset(asset.id)}>Approve <Check size={14} /></button> : <StatusPill status={latest?.preservedAssetIds.includes(asset.id) ? "preserved" : "ready"} />}</article>;
             })}
           </div>
           {stale.length > 0 && <button className="button button-primary approve-all" onClick={approveAffected} data-testid="approve-all">Approve {stale.length} affected output{stale.length === 1 ? "" : "s"} <Check size={16} /></button>}
@@ -1034,6 +1097,8 @@ function CinematicIntro({ onComplete }: { onComplete: () => void }) {
     <section
       className={cx("cinematic-intro", leaving && "cinematic-intro-leaving")}
       data-testid="site-intro"
+      role="dialog"
+      aria-modal="true"
       aria-label="Welcome to RECAST"
     >
       <div className="intro-aurora" aria-hidden="true"><i /><i /><i /></div>
@@ -1068,15 +1133,27 @@ export function CampaignStudio() {
   const [navOpen, setNavOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const { notice, clearNotice, view } = useCampaignStore();
+  const contentRef = useRef<HTMLElement>(null);
 
   const completeIntro = () => {
-    window.sessionStorage.setItem("recast-intro-seen", "true");
+    try {
+      window.sessionStorage.setItem("recast-intro-seen", "true");
+    } catch {
+      // Storage can be unavailable in privacy-restricted browser contexts.
+    }
     setShowIntro(false);
   };
 
   useEffect(() => {
+    window.localStorage.removeItem(LEGACY_WORKSPACE_STORAGE_KEY);
     if (new URLSearchParams(window.location.search).has("replay")) return;
-    if (window.sessionStorage.getItem("recast-intro-seen") !== "true") return;
+    let introSeen = false;
+    try {
+      introSeen = window.sessionStorage.getItem("recast-intro-seen") === "true";
+    } catch {
+      introSeen = false;
+    }
+    if (!introSeen) return;
     const frame = window.requestAnimationFrame(() => setShowIntro(false));
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -1088,8 +1165,11 @@ export function CampaignStudio() {
   }, [notice, clearNotice]);
 
   useEffect(() => {
+    if (showIntro) return;
     window.scrollTo({ top: 0, behavior: "auto" });
-  }, [view]);
+    const frame = window.requestAnimationFrame(() => contentRef.current?.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [view, showIntro]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1107,12 +1187,12 @@ export function CampaignStudio() {
     <>
       <a className="skip-link" href="#studio-content">Skip to campaign workspace</a>
       {showIntro && <CinematicIntro onComplete={completeIntro} />}
-      <div className={cx("studio-shell", showIntro && "studio-awaiting")}>
+      <div className={cx("studio-shell", showIntro && "studio-awaiting")} aria-hidden={showIntro || undefined} inert={showIntro || undefined}>
         <AppSidebar open={navOpen} onClose={() => setNavOpen(false)} />
         {navOpen && <button className="nav-scrim" onClick={() => setNavOpen(false)} aria-label="Close navigation overlay" />}
         <div className="studio-main">
           <AppHeader onMenu={() => setNavOpen(true)} onCommand={() => setCommandOpen(true)} />
-          <main className="content-frame" id="studio-content"><CurrentView /></main>
+          <main ref={contentRef} className="content-frame" id="studio-content" tabIndex={-1}><CurrentView /></main>
         </div>
         {commandOpen && <StudioSwitcher open onClose={() => setCommandOpen(false)} />}
         {notice && <div className="toast" role="status" aria-live="polite"><CheckCircle2 size={18} /><span>{notice}</span><button onClick={clearNotice} aria-label="Dismiss"><X size={15} /></button></div>}

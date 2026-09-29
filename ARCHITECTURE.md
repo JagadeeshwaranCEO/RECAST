@@ -82,5 +82,16 @@ The deterministic guard compares requested wording with the controlled claim reg
 
 ## Local-first reliability
 
-Zustand holds the in-browser demo session. No network service is required for generation, revisions, checks, approvals, or exports. A future provider may suggest structured concept or copy data, but those responses must pass the same Zod schemas before entering the graph.
+Zustand holds the in-browser demo session. Builder work is scoped to `sessionStorage`, and campaign approval state remains in memory. No network service is required for generation, revisions, checks, approvals, or exports. A future provider may suggest structured concept or copy data, but those responses must pass the same Zod schemas before entering the graph.
 
+## Runtime trust boundaries
+
+- **Public edge:** the Cloudflare Worker serves the Vinext app. RECAST removes the unused image-transform route, applies CSP and anti-framing headers, and uses different cache lifetimes for hashed bundles and unversioned media.
+- **Browser workspace:** user-entered briefs and comments are local to the active browser tab. They are presentation state, not authoritative approvals or server records.
+- **Campaign engine:** only schema-valid campaign structures enter the deterministic revision engine. Base-version checks stop stale jobs, and explicit dependency edges define exactly what can change.
+- **External research:** source links are static citations opened by the user. The server does not crawl or proxy them.
+- **Future identity:** `chatgpt-auth.ts` is an optional trusted-proxy helper and is not an active authorization boundary in the public demo.
+
+## Operational baseline
+
+`/api/health` exposes non-sensitive service mode and engine readiness with `Cache-Control: no-store`. Route errors fall into a recoverable, accessible UI state. GitHub Actions enforces lint, typecheck, unit tests, production build, and the Playwright judge flow. See `PRODUCTION_READINESS.md` for the remaining multi-tenant gates.
