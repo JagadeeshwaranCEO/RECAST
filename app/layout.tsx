@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const fallbackSiteUrl = "https://recast-campaign-studio.kavitha1975-vlr.chatgpt.site";
+const fallbackSiteUrl = "https://recast-ai-studio.vercel.app";
 
 function metadataBase(): URL {
   try {

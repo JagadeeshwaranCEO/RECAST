@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://recast-campaign-studio.kavitha1975-vlr.chatgpt.site/"><strong>Explore the live experience ↗</strong></a>
+  <a href="https://recast-ai-studio.vercel.app/"><strong>Explore the live experience ↗</strong></a>
   &nbsp;·&nbsp;
   <a href="./DEMO_SCRIPT.md">3-minute judge demo</a>
   &nbsp;·&nbsp;
@@ -104,6 +104,7 @@ Machine checks verify price consistency, approved claims, locked-asset integrity
 - Responsive, keyboard-accessible interface with loading, empty, warning, success and review states.
 - A focused seven-stage judge path; Brand OS, assets, research, collaboration and monitoring remain available through the searchable tool switcher.
 - Session-scoped workspace persistence, security headers, safe caching, health check and error boundary.
+- Public Vercel production deployment plus Supabase-backed private workspaces and public-safe campaign publication records, protected by row-level security.
 - Automated unit, browser, type, lint and production-build gates.
 
 ## How the system thinks
@@ -194,7 +195,9 @@ npx playwright install chromium
 | State | Zustand with session-scoped persistence |
 | Validation | Zod schemas at every campaign boundary |
 | AI | Optional Responses API adapter with structured-output validation and deterministic fallback |
-| Runtime | Vinext, Vite and Cloudflare Workers tooling |
+| Hosting | Vercel production deployment with a Next.js 16 build |
+| Persistence | Supabase Postgres, passwordless Auth and owner-scoped Row Level Security |
+| Local runtime | Vinext, Vite and Cloudflare Workers tooling |
 | Testing | Vitest and Playwright |
 | Quality | ESLint, TypeScript, production build and GitHub Actions |
 
@@ -228,7 +231,8 @@ docs/images/               Repository presentation assets
 
 This hackathon build remains fully usable without an API key. When `OPENAI_API_KEY` is configured, the agent council uses a schema-validated provider response; otherwise it uses the deterministic governed planner.
 
-- Persistent accounts, team tenancy and a production database are future deployment gates.
+- Multi-user tenancy, role management and cloud asset uploads remain future deployment gates.
+- RECAST Cloud is provisioned with owner-scoped Supabase tables. Before sending production magic links, add `https://recast-ai-studio.vercel.app` to Supabase Auth’s Site URL and Redirect URLs; configure a branded SMTP provider before sending at scale.
 - Reel export is a labelled scene-plan preview; a video renderer is not configured.
 - Commercial deployments require rights-cleared client photography.
 - Uploaded files remain browser-session assets in this prototype. Share links carry the approved text campaign payload and use deployment assets; production requires object storage, malware scanning, rights metadata and a durable database.

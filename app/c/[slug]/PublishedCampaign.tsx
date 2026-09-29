@@ -3,8 +3,9 @@
 /* eslint-disable @next/next/no-img-element -- campaign publishers may use browser-local uploaded data URLs. */
 
 import Link from "next/link";
-import { useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type PublishedPayload = {
   brandName: string;
@@ -55,13 +56,39 @@ export default function PublishedCampaign() {
     },
     () => "",
   );
-  const campaign = useMemo(() => {
-    if (!savedCampaign) return fallback;
-    const shared = decodeSharePayload(savedCampaign);
-    if (shared) return { ...fallback, ...shared };
-    try { return { ...fallback, ...JSON.parse(savedCampaign) as PublishedPayload }; }
-    catch { return fallback; }
+  const [cloudCampaign, setCloudCampaign] = useState<PublishedPayload | null>(null);
+
+  useEffect(() => {
+    if (savedCampaign) return;
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+
+    const slug = window.location.pathname.split("/").filter(Boolean).pop() ?? "campaign";
+    let active = true;
+
+    void supabase
+      .from("campaign_publications")
+      .select("payload")
+      .eq("slug", slug)
+      .eq("status", "published")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active || !data?.payload || typeof data.payload !== "object" || Array.isArray(data.payload)) return;
+        setCloudCampaign(data.payload as PublishedPayload);
+      });
+
+    return () => { active = false; };
   }, [savedCampaign]);
+
+  const campaign = useMemo(() => {
+    if (savedCampaign) {
+      const shared = decodeSharePayload(savedCampaign);
+      if (shared) return { ...fallback, ...shared };
+      try { return { ...fallback, ...JSON.parse(savedCampaign) as PublishedPayload }; }
+      catch { return fallback; }
+    }
+    return cloudCampaign ? { ...fallback, ...cloudCampaign } : fallback;
+  }, [cloudCampaign, savedCampaign]);
 
   return (
     <main className="published-campaign" style={{ "--launch-bg": campaign.backgroundColor, "--launch-accent": campaign.accentColor } as React.CSSProperties}>

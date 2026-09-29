@@ -2,13 +2,16 @@
 
 /* eslint-disable @next/next/no-img-element -- uploaded data URLs and local campaign assets require direct rendering in the editor. */
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import {
   ArrowRight,
   Bot,
   CalendarClock,
   Check,
   CheckCircle2,
+  Cloud,
+  CloudOff,
   Copy,
   Download,
   ExternalLink,
@@ -18,6 +21,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   Megaphone,
+  Mail,
   Palette,
   Play,
   Radar,
@@ -33,6 +37,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { runLocalCampaignCouncil, type AgentCouncilResult } from "@/lib/agent-orchestrator";
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useCampaignStore } from "@/store/campaign-store";
 import { useWorkspaceStore } from "@/store/workspace-store";
 import {
@@ -518,6 +523,11 @@ export function LaunchHub() {
   const humanApproval = useCampaignStore((state) => state.humanApproval);
   const setView = useCampaignStore((state) => state.setView);
   const [notice, setNotice] = useState("");
+  const [cloudEmail, setCloudEmail] = useState("");
+  const [cloudSession, setCloudSession] = useState<Session | null>(null);
+  const [cloudNotice, setCloudNotice] = useState("");
+  const [cloudBusy, setCloudBusy] = useState(false);
+  const cloudConfigured = isSupabaseConfigured();
   const asset = assets.find((item) => item.id === poster.assetId) ?? assets[0];
   const path = `/c/${launch.slug || "campaign"}`;
   const staleApprovals = campaign.approvals.filter((approval) => approval.status !== "approved").length;
@@ -545,12 +555,98 @@ export function LaunchHub() {
   };
   const sharePath = `${path}?campaign=${encodeSharePayload(payload)}`;
 
-  const publish = () => {
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+
+    let active = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active) setCloudSession(data.session);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setCloudSession(session));
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const saveWorkspace = async () => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase || !cloudSession) throw new Error("Sign in to save this campaign to the cloud.");
+
+    const workspacePayload = {
+      schemaVersion: 1,
+      draft,
+      poster,
+      launch,
+      agentResult,
+      sourceVersion: campaign.version,
+      assets: assets.filter((item) => !item.url.startsWith("data:")).map(({ id, name, kind, mimeType, size, url, createdAt }) => ({ id, name, kind, mimeType, size, url, createdAt })),
+      savedAt: new Date().toISOString(),
+    };
+    const title = `${draft.brandName} — ${draft.productName}`.trim().slice(0, 160) || "Untitled campaign";
+    const { data, error } = await supabase
+      .from("campaign_workspaces")
+      .upsert({ owner_id: cloudSession.user.id, slug: launch.slug, title, payload: workspacePayload }, { onConflict: "owner_id,slug" })
+      .select("id")
+      .single();
+
+    if (error || !data) throw new Error(error?.message ?? "Cloud workspace could not be saved.");
+    return data.id as string;
+  };
+
+  const savePublishedCampaign = async (publishedPayload: typeof payload) => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase || !cloudSession) throw new Error("Sign in to publish a durable campaign page.");
+    const workspaceId = await saveWorkspace();
+    const { error } = await supabase
+      .from("campaign_publications")
+      .upsert({
+        workspace_id: workspaceId,
+        owner_id: cloudSession.user.id,
+        slug: launch.slug,
+        payload: publishedPayload,
+        status: "published",
+        published_at: publishedPayload.publishedAt,
+      }, { onConflict: "slug" });
+
+    if (error) throw new Error(error.message);
+  };
+
+  const requestCloudSignIn = async () => {
+    const supabase = getSupabaseBrowserClient();
+    const email = cloudEmail.trim();
+    if (!supabase) return;
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setCloudNotice("Enter a valid work email to receive the secure sign-in link.");
+      return;
+    }
+    setCloudBusy(true);
+    setCloudNotice("");
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+    setCloudBusy(false);
+    setCloudNotice(error ? error.message : "Secure sign-in link sent. Open it in this browser to enable cloud sync.");
+  };
+
+  const publish = async () => {
     if (!launchReady) return;
     const publishedPayload = { ...payload, publishedAt: new Date().toISOString() };
     localStorage.setItem(`recast:published:${launch.slug}`, JSON.stringify(publishedPayload));
     setLaunch({ status: "published", publishedAt: publishedPayload.publishedAt });
-    setNotice(`Shareable campaign route is live at ${path}`);
+    if (!cloudSession) {
+      setNotice(`Shareable campaign route is live at ${path}. Sign in to make this launch durable in RECAST Cloud.`);
+      return;
+    }
+    setCloudBusy(true);
+    try {
+      await savePublishedCampaign(publishedPayload);
+      setNotice(`Campaign is live at ${path} and persisted to RECAST Cloud.`);
+    } catch (error) {
+      setNotice(`Local share route is live at ${path}. Cloud sync needs attention: ${error instanceof Error ? error.message : "unknown error"}`);
+    } finally {
+      setCloudBusy(false);
+    }
   };
 
   const schedule = () => {
@@ -583,7 +679,7 @@ export function LaunchHub() {
           <label><span>Campaign slug</span><div className="slug-control"><small>/c/</small><input value={launch.slug} maxLength={64} onChange={(event) => setLaunch({ slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-") })} /></div></label>
           <label><span>Launch date and time</span><input type="datetime-local" value={launch.launchAt} onChange={(event) => setLaunch({ launchAt: event.target.value })} /></label>
           <fieldset><legend>Activation destinations</legend><div className="launch-channels">{["Campaign page", "Instagram", "LinkedIn", "YouTube Shorts", "Email"].map((channel) => { const selected = launch.channels.includes(channel); return <button type="button" key={channel} className={selected ? "selected" : ""} onClick={() => setLaunch({ channels: selected ? launch.channels.filter((item) => item !== channel) : [...launch.channels, channel] })}>{selected && <Check size={13} />}{channel}</button>; })}</div></fieldset>
-          <div className="launch-actions"><button className="button button-outline" onClick={schedule} disabled={!launchReady}><CalendarClock size={16} /> Schedule activation</button><button className="button button-primary" onClick={publish} disabled={!launchReady} data-testid="publish-campaign"><Rocket size={16} /> Publish shareable campaign</button></div>
+          <div className="launch-actions"><button className="button button-outline" onClick={schedule} disabled={!launchReady}><CalendarClock size={16} /> Schedule activation</button><button className="button button-primary" onClick={publish} disabled={!launchReady || cloudBusy} data-testid="publish-campaign"><Rocket size={16} /> {cloudBusy ? "Saving launch" : "Publish shareable campaign"}</button></div>
           {!launchReady && <p className="launch-blocked"><LockKeyhole size={14} /> Launch is intentionally locked. Complete every release gate above.</p>}
           {notice && <p className="launch-notice" role="status"><CheckCircle2 size={15} />{notice}</p>}
           {launch.status === "published" && <div className="published-actions"><a className="published-link" href={sharePath} target="_blank" rel="noreferrer"><Link2 size={15} />Open published campaign <ExternalLink size={14} /></a><button type="button" onClick={async () => { await navigator.clipboard.writeText(`${window.location.origin}${sharePath}`); setNotice("Share link copied to clipboard."); }}><Copy size={14} /> Copy share link</button></div>}
@@ -599,6 +695,21 @@ export function LaunchHub() {
             {launch.channels.map((channel, index) => <div key={channel}><span>{index === 0 ? <Play size={14} /> : <CalendarClock size={14} />}</span><div><strong>{channel}</strong><small>{channel === "Campaign page" ? path : `Native ${channel} package · ${launch.launchAt.replace("T", " ")}`}</small></div><b>{launch.status === "published" && channel === "Campaign page" ? "LIVE" : launch.status === "scheduled" ? "QUEUED" : "DRAFT"}</b></div>)}
           </div>
         </div>
+      </section>
+
+      <section className="cloud-sync-panel">
+        <div className="panel-heading"><div><span>RECAST CLOUD</span><strong>Private workspace. Durable launch.</strong></div>{cloudSession ? <Cloud size={18} /> : <CloudOff size={18} />}</div>
+        {!cloudConfigured ? (
+          <p>Cloud sync is not configured for this deployment. Your campaign stays in this browser session and portable share links continue to work.</p>
+        ) : cloudSession ? (
+          <div className="cloud-signed-in">
+            <div><span><CheckCircle2 size={16} /> Connected</span><strong>{cloudSession.user.email ?? "Authenticated RECAST owner"}</strong><small>Only this signed-in owner can read or change the private workspace.</small></div>
+            <div><button className="button button-outline" type="button" disabled={cloudBusy} onClick={async () => { setCloudBusy(true); setCloudNotice(""); try { await saveWorkspace(); setCloudNotice("Private campaign workspace saved to RECAST Cloud."); } catch (error) { setCloudNotice(error instanceof Error ? error.message : "Cloud workspace could not be saved."); } finally { setCloudBusy(false); } }}><Cloud size={15} /> {cloudBusy ? "Saving" : "Save workspace"}</button><button className="text-button" type="button" onClick={async () => { const supabase = getSupabaseBrowserClient(); await supabase?.auth.signOut(); setCloudSession(null); setCloudNotice("Signed out of RECAST Cloud on this device."); }}>Sign out</button></div>
+          </div>
+        ) : (
+          <div className="cloud-sign-in"><div><strong>Keep this campaign beyond this tab.</strong><p>Use a passwordless work-email sign-in. RECAST’s row-level policies keep every draft private to its owner.</p></div><label><span className="sr-only">Work email</span><Mail size={15} /><input value={cloudEmail} type="email" autoComplete="email" maxLength={120} onChange={(event) => setCloudEmail(event.target.value)} placeholder="you@brand.com" /></label><button className="button button-outline" type="button" disabled={cloudBusy} onClick={requestCloudSignIn}><Mail size={15} /> {cloudBusy ? "Sending" : "Send sign-in link"}</button></div>
+        )}
+        {cloudNotice && <p className="cloud-sync-notice" role="status">{cloudNotice}</p>}
       </section>
 
       <section className="production-contract"><LockKeyhole size={18} /><div><strong>Production activation contract</strong><p>This build publishes a deployment-relative campaign page with a portable approved text payload. Browser-only uploaded media falls back to deployment assets. Production social publishing still requires OAuth channel connections, encrypted tokens, queue workers, retry policies, webhooks and platform review—those boundaries are not simulated.</p></div></section>
