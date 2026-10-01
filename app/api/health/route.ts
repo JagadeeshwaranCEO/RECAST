@@ -1,6 +1,9 @@
+import { resolveAiProvider } from "@/lib/ai-provider";
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const provider = resolveAiProvider();
   return Response.json(
     {
       status: "ok",
@@ -10,6 +13,7 @@ export async function GET() {
       checks: {
         application: "ready",
         campaignEngine: "ready",
+        agentProvider: provider ? provider.id : "local",
       },
       timestamp: new Date().toISOString(),
     },

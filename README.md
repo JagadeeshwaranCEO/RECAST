@@ -88,7 +88,7 @@ Machine checks verify price consistency, approved claims, locked-asset integrity
 
 - Multi-brand Campaign Builder for brand voice, audience, objective, proof, market, channels and visual tokens.
 - Brand OS with palette presets, typography behavior, locked production rules and live poster-token sync.
-- Six-agent campaign council for research, strategy, copy, art direction, claims and activation; optional model-assisted mode with a deterministic fallback.
+- Six-agent campaign council for research, strategy, copy, art direction, claims and activation; organizer-listed OpenRouter, Gemini, Groq and NVIDIA NIM adapters with a deterministic fallback.
 - Publish-ready channel packs with finished Instagram copy, LinkedIn posts, X threads, short-form video scripts, CTAs, hashtags, production notes, copy actions and one cohesive Markdown export.
 - Rights-aware Asset Vault for owned product imagery, campaign posters, logos and references.
 - Editable Poster Studio with 1:1, 4:5, 9:16 and 1.91:1 layouts plus real PNG export at production dimensions.
@@ -194,7 +194,7 @@ npx playwright install chromium
 | Interface | React 19, Next.js 16, TypeScript 5.9 |
 | State | Zustand with session-scoped persistence |
 | Validation | Zod schemas at every campaign boundary |
-| AI | Optional Responses API adapter with structured-output validation and deterministic fallback |
+| AI | Server-side provider fabric for OpenRouter, Gemini, Groq, NVIDIA NIM and OpenAI; structured-output validation and deterministic fallback |
 | Hosting | Vercel production deployment with a Next.js 16 build |
 | Persistence | Supabase Postgres, passwordless Auth and owner-scoped Row Level Security |
 | Local runtime | Vinext, Vite and Cloudflare Workers tooling |
@@ -217,6 +217,7 @@ lib/
   revision-engine.ts       Dependency traversal and selective updates
   campaign-intelligence.ts Strategy-pattern research layer
   agent-orchestrator.ts     Six-agent contracts and deterministic council
+  ai-provider.ts            Secure multi-provider routing and output validation
 store/
   workspace-store.ts       Local campaign workspace state
   production-store.ts      Assets, poster and launch workspace state
@@ -229,7 +230,9 @@ docs/images/               Repository presentation assets
 
 ## Honest boundaries
 
-This hackathon build remains fully usable without an API key. When `OPENAI_API_KEY` is configured, the agent council uses a schema-validated provider response; otherwise it uses the deterministic governed planner.
+This hackathon build remains fully usable without an API key. The agent council can use the free/API-key resources supplied by the organizers—OpenRouter, Gemini, Groq or NVIDIA NIM—while OpenAI remains supported. Keys stay on the server, every provider response is validated against the same campaign schema, and any timeout, provider error or malformed response falls back to the deterministic governed planner.
+
+Set `RECAST_AI_PROVIDER=auto` and configure any one of `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `NVIDIA_API_KEY` or `OPENAI_API_KEY`. The default OpenRouter model is the free-model router; provider quotas and terms can change, so confirm them before the final demo. See `.env.example` for model overrides.
 
 - Multi-user tenancy, role management and cloud asset uploads remain future deployment gates.
 - RECAST Cloud is provisioned with owner-scoped Supabase tables. Before sending production magic links, add `https://recast-ai-studio.vercel.app` to Supabase Auth’s Site URL and Redirect URLs; configure a branded SMTP provider before sending at scale.

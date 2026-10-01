@@ -36,7 +36,7 @@ import {
   WandSparkles,
   Workflow,
 } from "lucide-react";
-import { runLocalCampaignCouncil, type AgentCouncilResult } from "@/lib/agent-orchestrator";
+import { aiProviderLabel, runLocalCampaignCouncil, type AgentCouncilResult } from "@/lib/agent-orchestrator";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useCampaignStore } from "@/store/campaign-store";
 import { useWorkspaceStore } from "@/store/workspace-store";
@@ -276,7 +276,14 @@ export function AgentRoom() {
     try {
       const response = await fetch("/api/agents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(brief) });
       if (!response.ok) throw new Error("Agent service unavailable");
-      setResult(await response.json() as AgentCouncilResult);
+      const nextResult = await response.json() as AgentCouncilResult;
+      setResult(nextResult);
+      if (nextResult.mode === "local") {
+        const reason = response.headers.get("X-RECAST-Fallback-Reason");
+        setError(reason === "provider-unconfigured"
+          ? "No server-side AI key is active, so RECAST used its governed planner. Add any one organizer-listed provider key to enable model-assisted runs."
+          : "The configured AI provider was unavailable or returned invalid output, so RECAST completed the council safely with its governed planner.");
+      }
       setActiveAgent(0);
     } catch {
       setResult(runLocalCampaignCouncil(brief));
@@ -309,6 +316,7 @@ export function AgentRoom() {
       "",
       `Generated: ${new Date(result.generatedAt).toLocaleString("en-IN")}`,
       `Mode: ${result.mode === "ai" ? "Model-assisted" : "Governed deterministic fallback"}`,
+      `Provider: ${aiProviderLabel(result.provider)} · ${result.model}`,
       "",
       ...result.channelPlan.flatMap((channel) => [
         `## ${channel.channel} — ${channel.format}`,
@@ -352,14 +360,15 @@ export function AgentRoom() {
           <div className="agent-orbit" aria-hidden="true"><Bot size={36} /><i /><i /><i /></div>
           <h2>Turn the brief into a production plan.</h2>
           <p>The council will return a single campaign thesis, six accountable recommendations and a native role for every selected channel.</p>
-          <div><span>01 Research</span><span>02 Strategy</span><span>03 Voice</span><span>04 Art</span><span>05 Claims</span><span>06 Activation</span></div>
+          <div className="agent-role-list"><span>01 Research</span><span>02 Strategy</span><span>03 Voice</span><span>04 Art</span><span>05 Claims</span><span>06 Activation</span></div>
+          <p className="agent-provider-ready">Provider-ready: OpenRouter · Gemini · Groq · NVIDIA NIM</p>
         </section>
       ) : (
         <>
           <section className="agent-thesis">
-            <div><span>{result.mode === "ai" ? "MODEL-GROUNDED RUN" : "LOCAL GOVERNED RUN"}</span><strong>Campaign thesis</strong></div>
+            <div><span>{result.mode === "ai" ? `${aiProviderLabel(result.provider).toUpperCase()} RUN` : "LOCAL GOVERNED RUN"}</span><strong>Campaign thesis</strong></div>
             <p>{result.campaignThesis}</p>
-            <small>{result.mode === "ai" ? "Generated through the configured AI provider and validated against RECAST’s response schema." : "Deterministic fallback active. Add OPENAI_API_KEY to enable model-assisted council runs."}</small>
+            <small>{result.mode === "ai" ? `${result.model} generated this council; RECAST validated every field against its campaign schema before accepting it.` : "Deterministic fallback active. Add an OpenRouter, Gemini, Groq, NVIDIA NIM or OpenAI key to enable model-assisted council runs."}</small>
           </section>
           {error && <p className="agent-error" role="status">{error}</p>}
           <section className="agent-workspace">

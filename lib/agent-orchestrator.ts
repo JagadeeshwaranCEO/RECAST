@@ -26,6 +26,8 @@ export const AgentFindingSchema = z.object({
 
 export const AgentCouncilResultSchema = z.object({
   mode: z.enum(["ai", "local"]),
+  provider: z.enum(["openrouter", "gemini", "groq", "nvidia", "openai", "local"]),
+  model: z.string(),
   campaignThesis: z.string(),
   findings: z.array(AgentFindingSchema).min(4).max(8),
   channelPlan: z.array(z.object({
@@ -44,6 +46,19 @@ export const AgentCouncilResultSchema = z.object({
 });
 
 export type AgentCouncilResult = z.infer<typeof AgentCouncilResultSchema>;
+
+const providerLabels: Record<AgentCouncilResult["provider"], string> = {
+  openrouter: "OpenRouter",
+  gemini: "Google Gemini",
+  groq: "Groq",
+  nvidia: "NVIDIA NIM",
+  openai: "OpenAI",
+  local: "RECAST governed planner",
+};
+
+export function aiProviderLabel(provider: AgentCouncilResult["provider"]): string {
+  return providerLabels[provider];
+}
 
 const channelFormats: Record<string, string> = {
   Instagram: "Reel + carousel + story",
@@ -123,6 +138,8 @@ export function runLocalCampaignCouncil(input: AgentBrief): AgentCouncilResult {
 
   return {
     mode: "local",
+    provider: "local",
+    model: "recast-governed-planner-r2",
     campaignThesis: `${brand} should make ${product} feel like the most credible way for ${audience} to ${brief.promise.toLowerCase()}, using ${proofLead.toLowerCase()} as proof rather than decoration.`,
     generatedAt: new Date().toISOString(),
     findings: [
@@ -188,6 +205,7 @@ export function agentSystemPrompt(brief: AgentBrief): string {
   return [
     "You are the RECAST campaign council: research, strategy, copy, art direction, claims, and activation agents.",
     "Return valid JSON only. Keep every recommendation grounded in the supplied brand brief.",
+    "Return exactly three top-level fields: campaignThesis, findings, and channelPlan. Runtime provenance is added by the server.",
     "Never invent product claims, awards, testimonials, prices, performance numbers, or legal approvals.",
     "Make channel outputs native to each platform while preserving one campaign thesis.",
     `BRAND: ${brief.brandName}`,
