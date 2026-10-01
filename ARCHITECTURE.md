@@ -94,22 +94,22 @@ The deterministic guard compares requested wording with the controlled claim reg
 - **Revision status:** changed outputs remain stale until human approval.
 - **Tone and aesthetic quality:** explicitly marked for human judgment.
 
-## Local-first reliability
+## Local-first reliability and protected model access
 
-Zustand holds the in-browser demo session. Builder and production work are scoped to `sessionStorage`, and campaign approval state remains in memory. No network service is required for revisions, checks, approvals, poster export, local campaign hosting or the governed agent fallback. When a model key is configured, `/api/agents` selects an organizer-listed OpenRouter, Gemini, Groq or NVIDIA NIM adapter (or the existing OpenAI adapter), requests structured JSON, and validates the result against the same Zod contract. Invalid, timed-out or unavailable responses fall back to the local council.
+Zustand holds the in-browser editing session. Builder and production work are scoped to `sessionStorage`, and campaign approval state remains in memory until an authenticated owner saves the workspace. No network service is required for revisions, checks, approvals, poster export, a portable campaign preview or the governed agent fallback. When a model key is configured, `/api/agents` first requires an authenticated Supabase session and atomically consumes a Postgres quota, then selects an organizer-listed OpenRouter, Gemini, Groq or NVIDIA NIM adapter (or the OpenAI adapter). Structured output is bounded and validated against the same Zod contract. Anonymous, quota-service, provider, timeout and malformed-output failures complete safely with the local council and no paid provider call.
 
 ## Runtime trust boundaries
 
-- **Public edge:** the Cloudflare Worker serves the Vinext app. RECAST removes the unused image-transform route, applies CSP and anti-framing headers, and uses different cache lifetimes for hashed bundles and unversioned media.
+- **Public edge:** Vercel serves a Next.js 16.3.8 application. CSP, anti-framing, MIME, referrer, permissions, opener, resource and cross-domain policies apply to every route.
 - **Browser workspace:** user-entered briefs and comments are local to the active browser tab. They are presentation state, not authoritative approvals or server records.
 - **Uploaded assets:** PNG, JPEG and WebP files are MIME- and size-gated before browser-local ingestion. A commercial deployment must replace data URLs with signed object-storage uploads, malware scanning, rights metadata and tenant isolation.
-- **Agent adapter:** `/api/agents` validates input, keeps every key server-side, selects only an explicitly configured provider, enforces a small in-process demo rate limit, applies a timeout, requests structured JSON and validates output before returning it. The response records provider/model provenance without exposing credentials. Distributed rate limiting and tenant budgets remain production gates.
-- **Launch pages:** `/c/[slug]` renders a working browser-local campaign payload. Public multi-user hosting requires durable server persistence and globally unique tenant-aware slugs.
+- **Agent adapter:** `/api/agents` caps the request body, validates the brief, keeps every key server-side, consumes a distributed per-user quota, applies provider timeouts, and validates bounded JSON before returning it. The response records provider/model provenance without credentials or prompt logs. A small in-process filter remains defense in depth; daily tenant budgets remain a growth gate.
+- **Launch pages:** `/c/[slug]` accepts only the shared strict public schema from its URL, local storage or a published Supabase row. Invalid or oversized input falls back safely. Authenticated owners can persist globally unique publication slugs; uploaded data URLs never cross the publication boundary.
 - **Signal radar:** bundled signals demonstrate interaction and the learning loop; the interface explicitly labels them as demo data until an authorised listening provider is connected.
 - **Campaign engine:** only schema-valid campaign structures enter the deterministic revision engine. Base-version checks stop stale jobs, and explicit dependency edges define exactly what can change.
 - **External research:** source links are static citations opened by the user. The server does not crawl or proxy them.
-- **Future identity:** `chatgpt-auth.ts` is an optional trusted-proxy helper and is not an active authorization boundary in the public demo.
+- **Identity:** Supabase Auth provides the current owner boundary. Organization roles, SSO and collaborator permissions remain the next multi-tenant boundary.
 
 ## Operational baseline
 
-`/api/health` exposes non-sensitive service mode and engine readiness with `Cache-Control: no-store`. Route errors fall into a recoverable, accessible UI state. GitHub Actions enforces lint, typecheck, unit tests, production build, and the Playwright judge flow. See `PRODUCTION_READINESS.md` for the remaining multi-tenant gates.
+`/api/health` exposes non-sensitive service mode and engine readiness with `Cache-Control: no-store`. Agent requests emit privacy-minimised structured events with a request ID. Vercel Analytics and Speed Insights supply traffic and real-user performance signals. Route errors fall into a recoverable, accessible UI state. GitHub Actions enforces lint, typecheck, unit tests, dependency audit, production build, and the Playwright judge flow. See `PRODUCTION_READINESS.md` and `docs/SECURITY_AND_SCALE.md` for the remaining multi-tenant gates.

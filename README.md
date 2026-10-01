@@ -92,7 +92,7 @@ Machine checks verify price consistency, approved claims, locked-asset integrity
 - Publish-ready channel packs with finished Instagram copy, LinkedIn posts, X threads, short-form video scripts, CTAs, hashtags, production notes, copy actions and one cohesive Markdown export.
 - Rights-aware Asset Vault for owned product imagery, campaign posters, logos and references.
 - Editable Poster Studio with 1:1, 4:5, 9:16 and 1.91:1 layouts plus real PNG export at production dimensions.
-- Launch Control with five enforced release gates, a working campaign microsite, launch timing, channel package queue and a portable share URL.
+- Launch Control with six enforced release gates, including content safety, a working campaign microsite, launch timing, channel package queue and a portable share URL.
 - Signal Radar demo for mentions, sentiment, claim risk and an insight-to-brief learning loop; external providers are clearly marked as unconnected.
 - Complete seeded Stride campaign spanning Instagram Reel, Instagram Carousel and LinkedIn.
 - Versioned source of truth for prices, claims, evidence, prohibited wording and brand rules.
@@ -103,7 +103,8 @@ Machine checks verify price consistency, approved claims, locked-asset integrity
 - Exportable campaign JSON, revision Markdown, LinkedIn copy and a labelled reel scene-plan preview.
 - Responsive, keyboard-accessible interface with loading, empty, warning, success and review states.
 - A focused seven-stage judge path; Brand OS, assets, research, collaboration and monitoring remain available through the searchable tool switcher.
-- Session-scoped workspace persistence, security headers, safe caching, health check and error boundary.
+- Session-scoped drafts, owner-scoped Supabase persistence, distributed model quota, security headers, bounded public payloads, health check and error boundary.
+- Vercel Analytics, Speed Insights, privacy-minimised agent events and request IDs for a production monitoring baseline.
 - Public Vercel production deployment plus Supabase-backed private workspaces and public-safe campaign publication records, protected by row-level security.
 - Automated unit, browser, type, lint and production-build gates.
 
@@ -135,13 +136,13 @@ The deterministic control plane is the product guarantee: facts, claims and appr
 
 ## Run it locally
 
-**Requirements:** Node.js 22.13+
+**Requirements:** Node.js 22 LTS
 
 ```bash
 git clone https://github.com/JagadeeshwaranCEO/RECAST.git
 cd RECAST
 npm install
-npm run dev -- --port 3001
+npm run dev
 ```
 
 Open [http://localhost:3001](http://localhost:3001).
@@ -172,6 +173,7 @@ npm run test:unit
 npm run test:e2e
 npm run lint
 npm run typecheck
+npm run audit:deps
 npm run build
 ```
 
@@ -197,7 +199,7 @@ npx playwright install chromium
 | AI | Server-side provider fabric for OpenRouter, Gemini, Groq, NVIDIA NIM and OpenAI; structured-output validation and deterministic fallback |
 | Hosting | Vercel production deployment with a Next.js 16 build |
 | Persistence | Supabase Postgres, passwordless Auth and owner-scoped Row Level Security |
-| Local runtime | Vinext, Vite and Cloudflare Workers tooling |
+| Local runtime | Native Next.js development server on port 3001 |
 | Testing | Vitest and Playwright |
 | Quality | ESLint, TypeScript, production build and GitHub Actions |
 
@@ -243,7 +245,7 @@ Set `RECAST_AI_PROVIDER=auto` and configure any one of `OPENROUTER_API_KEY`, `GE
 - Tone and aesthetic quality remain human-review decisions by design.
 - Model output can propose structured strategy and copy, but cannot bypass source validation or human approval.
 
-Read [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md) for the security review and the exact path from hackathon system to multi-tenant SaaS.
+Read [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md) and [docs/SECURITY_AND_SCALE.md](./docs/SECURITY_AND_SCALE.md) for the verified security review, recent advisory coverage, monitoring contract and exact path from hackathon system to multi-tenant SaaS.
 
 ---
 

@@ -5,23 +5,15 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import {
+  decodePublishedCampaignPayload,
+  parsePublishedCampaignPayload,
+  parseStoredCampaignPayload,
+  type PublishedCampaignPayload,
+} from "@/lib/published-campaign";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-type PublishedPayload = {
-  brandName: string;
-  productName: string;
-  headline: string;
-  subheadline: string;
-  cta: string;
-  imageUrl?: string;
-  backgroundColor: string;
-  accentColor: string;
-  proof: string;
-  thesis: string;
-  publishedAt: string;
-};
-
-const fallback: PublishedPayload = {
+const fallback: PublishedCampaignPayload = {
   brandName: "Stride",
   productName: "The New Formal",
   headline: "YOUR DAY CHANGES.\nYOUR STYLE SHOULD KEEP UP.",
@@ -35,18 +27,6 @@ const fallback: PublishedPayload = {
   publishedAt: "2026-09-29T00:00:00.000Z",
 };
 
-function decodeSharePayload(value: string): PublishedPayload | null {
-  try {
-    const normalized = value.replaceAll("-", "+").replaceAll("_", "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const binary = atob(padded);
-    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-    return JSON.parse(new TextDecoder().decode(bytes)) as PublishedPayload;
-  } catch {
-    return null;
-  }
-}
-
 export default function PublishedCampaign() {
   const savedCampaign = useSyncExternalStore(
     () => () => undefined,
@@ -56,7 +36,7 @@ export default function PublishedCampaign() {
     },
     () => "",
   );
-  const [cloudCampaign, setCloudCampaign] = useState<PublishedPayload | null>(null);
+  const [cloudCampaign, setCloudCampaign] = useState<PublishedCampaignPayload | null>(null);
 
   useEffect(() => {
     if (savedCampaign) return;
@@ -73,8 +53,9 @@ export default function PublishedCampaign() {
       .eq("status", "published")
       .maybeSingle()
       .then(({ data }) => {
-        if (!active || !data?.payload || typeof data.payload !== "object" || Array.isArray(data.payload)) return;
-        setCloudCampaign(data.payload as PublishedPayload);
+        if (!active) return;
+        const parsed = parsePublishedCampaignPayload(data?.payload);
+        if (parsed) setCloudCampaign(parsed);
       });
 
     return () => { active = false; };
@@ -82,12 +63,9 @@ export default function PublishedCampaign() {
 
   const campaign = useMemo(() => {
     if (savedCampaign) {
-      const shared = decodeSharePayload(savedCampaign);
-      if (shared) return { ...fallback, ...shared };
-      try { return { ...fallback, ...JSON.parse(savedCampaign) as PublishedPayload }; }
-      catch { return fallback; }
+      return decodePublishedCampaignPayload(savedCampaign) ?? parseStoredCampaignPayload(savedCampaign) ?? fallback;
     }
-    return cloudCampaign ? { ...fallback, ...cloudCampaign } : fallback;
+    return cloudCampaign ?? fallback;
   }, [cloudCampaign, savedCampaign]);
 
   return (

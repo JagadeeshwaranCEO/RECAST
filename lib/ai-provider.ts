@@ -62,6 +62,7 @@ export const AGENT_COUNCIL_JSON_SCHEMA = {
   properties: {
     campaignThesis: {
       type: "string",
+      maxLength: 1200,
       description: "One concise strategic thesis that joins the brand promise, audience tension, and approved proof.",
     },
     findings: {
@@ -72,12 +73,12 @@ export const AGENT_COUNCIL_JSON_SCHEMA = {
         type: "object",
         additionalProperties: false,
         properties: {
-          id: { type: "string" },
-          agent: { type: "string" },
-          role: { type: "string" },
-          title: { type: "string" },
-          summary: { type: "string" },
-          outputs: { type: "array", minItems: 1, maxItems: 5, items: { type: "string" } },
+          id: { type: "string", maxLength: 80 },
+          agent: { type: "string", maxLength: 40 },
+          role: { type: "string", maxLength: 80 },
+          title: { type: "string", maxLength: 120 },
+          summary: { type: "string", maxLength: 1200 },
+          outputs: { type: "array", minItems: 1, maxItems: 5, items: { type: "string", maxLength: 400 } },
         },
         required: ["id", "agent", "role", "title", "summary", "outputs"],
       },
@@ -90,18 +91,18 @@ export const AGENT_COUNCIL_JSON_SCHEMA = {
         type: "object",
         additionalProperties: false,
         properties: {
-          channel: { type: "string" },
-          job: { type: "string" },
-          format: { type: "string" },
+          channel: { type: "string", maxLength: 40 },
+          job: { type: "string", maxLength: 160 },
+          format: { type: "string", maxLength: 160 },
           deliverable: {
             type: "object",
             additionalProperties: false,
             properties: {
-              headline: { type: "string" },
-              body: { type: "string" },
-              cta: { type: "string" },
-              hashtags: { type: "array", maxItems: 5, items: { type: "string" } },
-              productionNotes: { type: "array", minItems: 1, maxItems: 4, items: { type: "string" } },
+              headline: { type: "string", maxLength: 220 },
+              body: { type: "string", maxLength: 3000 },
+              cta: { type: "string", maxLength: 100 },
+              hashtags: { type: "array", maxItems: 5, items: { type: "string", maxLength: 80 } },
+              productionNotes: { type: "array", minItems: 1, maxItems: 4, items: { type: "string", maxLength: 240 } },
             },
             required: ["headline", "body", "cta", "hashtags", "productionNotes"],
           },

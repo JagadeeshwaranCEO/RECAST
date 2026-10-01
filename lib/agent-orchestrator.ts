@@ -16,34 +16,34 @@ export const AgentBriefSchema = z.object({
 export type AgentBrief = z.infer<typeof AgentBriefSchema>;
 
 export const AgentFindingSchema = z.object({
-  id: z.string(),
-  agent: z.string(),
-  role: z.string(),
-  title: z.string(),
-  summary: z.string(),
-  outputs: z.array(z.string()).min(1).max(5),
-});
+  id: z.string().trim().min(1).max(80),
+  agent: z.string().trim().min(1).max(40),
+  role: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(120),
+  summary: z.string().trim().min(1).max(1_200),
+  outputs: z.array(z.string().trim().min(1).max(400)).min(1).max(5),
+}).strict();
 
 export const AgentCouncilResultSchema = z.object({
   mode: z.enum(["ai", "local"]),
   provider: z.enum(["openrouter", "gemini", "groq", "nvidia", "openai", "local"]),
-  model: z.string(),
-  campaignThesis: z.string(),
+  model: z.string().trim().min(1).max(160),
+  campaignThesis: z.string().trim().min(1).max(1_200),
   findings: z.array(AgentFindingSchema).min(4).max(8),
   channelPlan: z.array(z.object({
-    channel: z.string(),
-    job: z.string(),
-    format: z.string(),
+    channel: z.string().trim().min(1).max(40),
+    job: z.string().trim().min(1).max(160),
+    format: z.string().trim().min(1).max(160),
     deliverable: z.object({
-      headline: z.string(),
-      body: z.string(),
-      cta: z.string(),
-      hashtags: z.array(z.string()).max(5),
-      productionNotes: z.array(z.string()).min(1).max(4),
-    }),
-  })).min(1).max(8),
-  generatedAt: z.string(),
-});
+      headline: z.string().trim().min(1).max(220),
+      body: z.string().trim().min(1).max(3_000),
+      cta: z.string().trim().min(1).max(100),
+      hashtags: z.array(z.string().trim().min(1).max(80)).max(5),
+      productionNotes: z.array(z.string().trim().min(1).max(240)).min(1).max(4),
+    }).strict(),
+  }).strict()).min(1).max(8),
+  generatedAt: z.string().datetime({ offset: true }),
+}).strict();
 
 export type AgentCouncilResult = z.infer<typeof AgentCouncilResultSchema>;
 

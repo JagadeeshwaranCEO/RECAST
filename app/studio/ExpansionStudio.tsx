@@ -37,6 +37,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { aiProviderLabel, runLocalCampaignCouncil, type AgentCouncilResult } from "@/lib/agent-orchestrator";
+import { encodePublishedCampaignPayload, PublishedCampaignPayloadSchema, type PublishedCampaignPayload } from "@/lib/published-campaign";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useCampaignStore } from "@/store/campaign-store";
 import { useWorkspaceStore } from "@/store/workspace-store";
@@ -97,13 +98,6 @@ function downloadTextFile(name: string, content: string, type = "text/markdown")
   link.click();
   link.remove();
   URL.revokeObjectURL(link.href);
-}
-
-function encodeSharePayload(payload: unknown) {
-  const bytes = new TextEncoder().encode(JSON.stringify(payload));
-  let binary = "";
-  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 }
 
 export function BrandControlCenter() {
@@ -274,7 +268,11 @@ export function AgentRoom() {
     setRunning(true);
     setError("");
     try {
-      const response = await fetch("/api/agents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(brief) });
+      const supabase = getSupabaseBrowserClient();
+      const { data } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+      const response = await fetch("/api/agents", { method: "POST", headers, body: JSON.stringify(brief) });
       if (!response.ok) throw new Error("Agent service unavailable");
       const nextResult = await response.json() as AgentCouncilResult;
       setResult(nextResult);
@@ -282,7 +280,11 @@ export function AgentRoom() {
         const reason = response.headers.get("X-RECAST-Fallback-Reason");
         setError(reason === "provider-unconfigured"
           ? "No server-side AI key is active, so RECAST used its governed planner. Add any one organizer-listed provider key to enable model-assisted runs."
-          : "The configured AI provider was unavailable or returned invalid output, so RECAST completed the council safely with its governed planner.");
+          : reason === "authentication-required"
+            ? "RECAST used its governed planner. Sign in from Launch Control to use the protected model-assisted council."
+            : reason === "quota-unavailable"
+              ? "The protected AI quota service is unavailable, so RECAST failed safely to its governed planner."
+              : "The configured AI provider was unavailable or returned invalid output, so RECAST completed the council safely with its governed planner.");
       }
       setActiveAgent(0);
     } catch {
@@ -540,16 +542,7 @@ export function LaunchHub() {
   const asset = assets.find((item) => item.id === poster.assetId) ?? assets[0];
   const path = `/c/${launch.slug || "campaign"}`;
   const staleApprovals = campaign.approvals.filter((approval) => approval.status !== "approved").length;
-  const launchChecks = [
-    { label: "Brief", ready: Boolean(draft.brandName.trim() && draft.productName.trim() && draft.proof.trim()) },
-    { label: "Agent council", ready: Boolean(agentResult) },
-    { label: "Production master", ready: Boolean(asset && poster.headline.trim() && poster.cta.trim()) },
-    { label: "Human approval", ready: humanApproval && staleApprovals === 0 },
-    { label: "Destination", ready: Boolean(launch.slug.trim() && launch.channels.length) },
-  ];
-  const readyCount = launchChecks.filter((check) => check.ready).length;
-  const launchReady = readyCount === launchChecks.length;
-  const payload = {
+  const payloadResult = PublishedCampaignPayloadSchema.safeParse({
     brandName: draft.brandName,
     productName: draft.productName,
     headline: poster.headline,
@@ -561,8 +554,19 @@ export function LaunchHub() {
     proof: draft.proof,
     thesis: agentResult?.campaignThesis ?? draft.promise,
     publishedAt: launch.publishedAt ?? new Date().toISOString(),
-  };
-  const sharePath = `${path}?campaign=${encodeSharePayload(payload)}`;
+  });
+  const payload = payloadResult.success ? payloadResult.data : null;
+  const launchChecks = [
+    { label: "Brief", ready: Boolean(draft.brandName.trim() && draft.productName.trim() && draft.proof.trim()) },
+    { label: "Agent council", ready: Boolean(agentResult) },
+    { label: "Production master", ready: Boolean(asset && poster.headline.trim() && poster.cta.trim()) },
+    { label: "Human approval", ready: humanApproval && staleApprovals === 0 },
+    { label: "Destination", ready: Boolean(launch.slug.trim() && launch.channels.length) },
+    { label: "Content safety", ready: Boolean(payload) },
+  ];
+  const readyCount = launchChecks.filter((check) => check.ready).length;
+  const launchReady = readyCount === launchChecks.length;
+  const sharePath = payload ? `${path}?campaign=${encodePublishedCampaignPayload(payload)}` : path;
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -605,7 +609,7 @@ export function LaunchHub() {
     return data.id as string;
   };
 
-  const savePublishedCampaign = async (publishedPayload: typeof payload) => {
+  const savePublishedCampaign = async (publishedPayload: PublishedCampaignPayload) => {
     const supabase = getSupabaseBrowserClient();
     if (!supabase || !cloudSession) throw new Error("Sign in to publish a durable campaign page.");
     const workspaceId = await saveWorkspace();
@@ -639,7 +643,7 @@ export function LaunchHub() {
   };
 
   const publish = async () => {
-    if (!launchReady) return;
+    if (!launchReady || !payload) return;
     const publishedPayload = { ...payload, publishedAt: new Date().toISOString() };
     localStorage.setItem(`recast:published:${launch.slug}`, JSON.stringify(publishedPayload));
     setLaunch({ status: "published", publishedAt: publishedPayload.publishedAt });

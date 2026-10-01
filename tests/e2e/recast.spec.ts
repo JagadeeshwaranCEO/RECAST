@@ -208,8 +208,6 @@ test("runtime exposes a healthy, hardened deterministic service", async ({ page,
   await expect(health.json()).resolves.toMatchObject({
     status: "ok",
     service: "recast-campaign-studio",
-    mode: "deterministic-demo",
-    storage: "browser-session",
     checks: { application: "ready", campaignEngine: "ready" },
   });
   expect(health.headers()["cache-control"]).toContain("no-store");
@@ -220,6 +218,38 @@ test("runtime exposes a healthy, hardened deterministic service", async ({ page,
   expect(headers["permissions-policy"]).toContain("camera=()");
   expect(headers["x-content-type-options"]).toBe("nosniff");
   expect(headers["x-frame-options"]).toBe("DENY");
+});
+
+test("security boundaries reject oversized API input and malformed public campaigns", async ({ page, request }) => {
+  const oversized = await request.post("/api/agents", {
+    headers: { "content-type": "application/json" },
+    data: { padding: "x".repeat(17_000) },
+  });
+  expect(oversized.status()).toBe(413);
+  expect(oversized.headers()["cache-control"]).toContain("no-store");
+  expect(oversized.headers()["x-request-id"]).toBeTruthy();
+
+  const brief = {
+    brandName: "Northstar",
+    productName: "Care Companion",
+    challenge: "Help care teams coordinate without losing the human context.",
+    audience: "Family care teams",
+    objective: "Create an evidence-led launch",
+    promise: "Every care decision stays connected",
+    proof: "Encrypted notes and shared reminders",
+    tone: "Calm, precise, and humane",
+    market: "India",
+    channels: ["Instagram"],
+  };
+  const anonymousRun = await request.post("/api/agents", { data: brief });
+  expect(anonymousRun.ok()).toBe(true);
+  expect(anonymousRun.headers()["x-recast-agent-mode"]).toBe("local-fallback");
+  expect(anonymousRun.headers()["x-request-id"]).toBeTruthy();
+
+  const malformed = Buffer.from(JSON.stringify({ headline: 1, backgroundColor: "javascript:alert(1)" })).toString("base64url");
+  await page.goto(`/c/security-regression?campaign=${malformed}`);
+  await expect(page.getByRole("heading", { name: "YOUR DAY CHANGES. YOUR STYLE SHOULD KEEP UP." })).toBeVisible();
+  await expect(page.getByText("Recovery mode", { exact: false })).toHaveCount(0);
 });
 
 test("reset clears the session workspace and legacy browser data", async ({ page }) => {
