@@ -18,8 +18,6 @@
 <p align="center">
   <a href="https://recast-ai-studio.vercel.app/"><strong>Explore the live experience ↗</strong></a>
   &nbsp;·&nbsp;
-  <a href="./DEMO_SCRIPT.md">3-minute judge demo</a>
-  &nbsp;·&nbsp;
   <a href="./ARCHITECTURE.md">Architecture</a>
 </p>
 
@@ -163,8 +161,6 @@ Campaign home
   → Human sign-off
   → Publish and open the shareable campaign
 ```
-
-The complete timed narration is in [DEMO_SCRIPT.md](./DEMO_SCRIPT.md).
 
 ## Verify the build
 
