@@ -100,7 +100,7 @@ Machine checks verify price consistency, approved claims, locked-asset integrity
 - Per-output approval, approve-all, revision history and deterministic demo reset.
 - Exportable campaign JSON, revision Markdown, LinkedIn copy and a labelled reel scene-plan preview.
 - Responsive, keyboard-accessible interface with loading, empty, warning, success and review states.
-- A focused seven-stage judge path; Brand OS, assets, research, collaboration and monitoring remain available through the searchable tool switcher.
+- A focused end-to-end campaign workflow; Brand OS, assets, research, collaboration and monitoring remain available through the searchable tool switcher.
 - Session-scoped drafts, owner-scoped Supabase persistence, distributed model quota, security headers, bounded public payloads, health check and error boundary.
 - Vercel Analytics, Speed Insights, privacy-minimised agent events and request IDs for a production monitoring baseline.
 - Public Vercel production deployment plus Supabase-backed private workspaces and public-safe campaign publication records, protected by row-level security.
@@ -131,59 +131,6 @@ flowchart LR
 ```
 
 The deterministic control plane is the product guarantee: facts, claims and approvals behave predictably even when a future model-assisted suggestion layer is unavailable. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the data contracts and trust boundaries.
-
-## Run it locally
-
-**Requirements:** Node.js 22 LTS
-
-```bash
-git clone https://github.com/JagadeeshwaranCEO/RECAST.git
-cd RECAST
-npm install
-npm run dev
-```
-
-Open [http://localhost:3001](http://localhost:3001).
-
-## The three-minute judge path
-
-```text
-Campaign home
-  → Brief
-  → Agent council + finished channel pack
-  → Poster studio
-  → Revise
-  → Change price
-  → Inspect the dependency diff
-  → Test an unsupported waterproof claim
-  → Use the approved replacement
-  → Review only affected outputs
-  → Human sign-off
-  → Publish and open the shareable campaign
-```
-
-## Verify the build
-
-```bash
-npm run test:unit
-npm run test:e2e
-npm run lint
-npm run typecheck
-npm run audit:deps
-npm run build
-```
-
-Or run the entire CI contract:
-
-```bash
-npm run ci
-```
-
-Playwright may require a one-time browser install:
-
-```bash
-npx playwright install chromium
-```
 
 ## Technology
 
@@ -225,6 +172,28 @@ tests/
   e2e/recast.spec.ts       Full judge-path browser test
 docs/images/               Repository presentation assets
 ```
+
+<details>
+<summary><strong>Developer setup and verification</strong></summary>
+
+Requires Node.js 22 LTS.
+
+```bash
+git clone https://github.com/JagadeeshwaranCEO/RECAST.git
+cd RECAST
+npm install
+npm run dev
+```
+
+The local studio runs at [http://localhost:3001](http://localhost:3001). Run the complete quality contract with:
+
+```bash
+npm run ci
+```
+
+Playwright may require a one-time Chromium install with `npx playwright install chromium`.
+
+</details>
 
 ## Honest boundaries
 
