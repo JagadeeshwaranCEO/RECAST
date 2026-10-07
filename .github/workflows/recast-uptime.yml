@@ -1,0 +1,26 @@
+name: RECAST production health
+
+on:
+  schedule:
+    - cron: "23 */8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recast-production-health
+  cancel-in-progress: true
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify RECAST and Supabase
+        env:
+          HEALTH_URL: https://recast-ai-studio.vercel.app/api/health
+        run: |
+          curl --fail --silent --show-error \
+            --retry 2 --retry-delay 10 --max-time 20 \
+            "$HEALTH_URL"

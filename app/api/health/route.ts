@@ -1,16 +1,17 @@
 import { resolveAiProvider } from "@/lib/ai-provider";
+import { checkSupabaseHealth } from "@/lib/supabase/health";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const provider = resolveAiProvider();
-  const cloudConfigured = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-  );
+  const cloudHealth = await checkSupabaseHealth();
+  const cloudConfigured = cloudHealth !== "not-configured";
+  const healthy = cloudHealth !== "degraded";
+
   return Response.json(
     {
-      status: "ok",
+      status: healthy ? "ok" : "degraded",
       service: "recast-campaign-studio",
       mode: provider ? "hybrid-ai" : "governed-local",
       storage: cloudConfigured ? "supabase-and-browser-session" : "browser-session",
@@ -18,11 +19,12 @@ export async function GET() {
         application: "ready",
         campaignEngine: "ready",
         agentProvider: provider ? provider.id : "local",
-        cloudPersistence: cloudConfigured ? "configured" : "optional",
+        cloudPersistence: cloudHealth,
       },
       timestamp: new Date().toISOString(),
     },
     {
+      status: healthy ? 200 : 503,
       headers: {
         "Cache-Control": "no-store",
       },
